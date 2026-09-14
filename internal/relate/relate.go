@@ -130,7 +130,8 @@ type FuncGroup struct {
 
 // Constructors returns the functions of the site whose first result is t
 // or a pointer to t, grouped by package. The group of the package of t comes
-// first with an empty path, and the other groups follow in import path
+// first with an empty path, then the groups of the other packages of its
+// module, then the groups of the other modules, each run in import path
 // order.
 func (idx *Index) Constructors(t *model.Type) []FuncGroup {
 	return idx.funcGroups(t, func(f *model.Func) bool {
@@ -148,12 +149,13 @@ func (idx *Index) Utilities(t *model.Type) []FuncGroup {
 }
 
 // funcGroups collects the site functions accepted by match, grouped by
-// package with the package of t first.
+// package in [Index.Constructors] order.
 func (idx *Index) funcGroups(t *model.Type, match func(*model.Func) bool) []FuncGroup {
 	if t.Obj == nil || t.Pkg == nil {
 		return nil
 	}
 	var groups []FuncGroup
+	ranks := map[string]int{}
 	for _, path := range slices.Sorted(maps.Keys(idx.packages)) {
 		p := idx.packages[path]
 		var funcs []*model.Func
@@ -168,12 +170,45 @@ func (idx *Index) funcGroups(t *model.Type, match func(*model.Func) bool) []Func
 		g := FuncGroup{Path: path, Funcs: funcs}
 		if p == t.Pkg {
 			g.Path = ""
-			groups = slices.Insert(groups, 0, g)
-			continue
 		}
+		ranks[g.Path] = distance(t, p)
 		groups = append(groups, g)
 	}
+	slices.SortStableFunc(groups, func(lhs, rhs FuncGroup) int {
+		return compareGroups(ranks[lhs.Path], lhs.Path, ranks[rhs.Path], rhs.Path)
+	})
 	return groups
+}
+
+// Distances between the package of a page type and the package of a related
+// entity, in display order.
+const (
+	samePackage = iota
+	sameModule
+	otherModule
+)
+
+// distance ranks the package p against the package of t. A nil p is a
+// package outside the site.
+func distance(t *model.Type, p *model.Package) int {
+	switch {
+	case p == nil:
+		return otherModule
+	case p == t.Pkg:
+		return samePackage
+	case p.Module == t.Pkg.Module:
+		return sameModule
+	default:
+		return otherModule
+	}
+}
+
+// compareGroups orders two groups by distance, then by import path.
+func compareGroups(lhsRank int, lhsPath string, rhsRank int, rhsPath string) int {
+	if lhsRank != rhsRank {
+		return lhsRank - rhsRank
+	}
+	return strings.Compare(lhsPath, rhsPath)
 }
 
 // Implements returns the non-empty interfaces that t, or a pointer to t,
@@ -207,10 +242,12 @@ func (idx *Index) Implementations(t *model.Type) []Impl {
 }
 
 // Groups sorts impls into groups by package. The group of the package of t
-// comes first with an empty path, and the other groups follow in import path
-// order.
+// comes first with an empty path, then the groups of the other packages of
+// its module, then the groups of the other modules and of packages outside
+// the site, each run in import path order.
 func Groups(impls []Impl, t *model.Type) []Group {
 	byPath := map[string]*Group{}
+	ranks := map[string]int{}
 	var result []*Group
 	for _, impl := range impls {
 		path := impl.Obj.Pkg().Path()
@@ -221,6 +258,7 @@ func Groups(impls []Impl, t *model.Type) []Group {
 		if !ok {
 			g = &Group{Path: path}
 			byPath[path] = g
+			ranks[path] = distance(t, localPackage(impl))
 			result = append(result, g)
 		}
 		g.Impls = append(g.Impls, impl)
@@ -231,13 +269,21 @@ func Groups(impls []Impl, t *model.Type) []Group {
 		})
 	}
 	slices.SortFunc(result, func(lhs, rhs *Group) int {
-		return strings.Compare(lhs.Path, rhs.Path)
+		return compareGroups(ranks[lhs.Path], lhs.Path, ranks[rhs.Path], rhs.Path)
 	})
 	groups := make([]Group, 0, len(result))
 	for _, g := range result {
 		groups = append(groups, *g)
 	}
 	return groups
+}
+
+// localPackage returns the site package that declares impl, or nil.
+func localPackage(impl Impl) *model.Package {
+	if impl.Local == nil {
+		return nil
+	}
+	return impl.Local.Pkg
 }
 
 // implements reports whether typ or *typ satisfies iface, and whether the

@@ -270,7 +270,7 @@ func TestLoad_WithWorkspace_ReturnsEveryModule(t *testing.T) {
 		{
 			Path:     "example.com/multi/alpha",
 			Dir:      "alpha",
-			Packages: []string{"example.com/multi/alpha"},
+			Packages: []string{"example.com/multi/alpha", "example.com/multi/alpha/inner"},
 		},
 		{
 			Path:     "example.com/multi/beta",
@@ -310,8 +310,9 @@ func TestLoad_WithWorkspace_SetsPackageModule(t *testing.T) {
 	cfg := loader.Config{Dir: testdataDir(t, "multi"), Workspace: "go.work"}
 	want := map[string]string{
 		"example.com/multi":          "example.com/multi",
-		"example.com/multi/alpha":    "example.com/multi/alpha",
-		"example.com/multi/beta/lib": "example.com/multi/beta",
+		"example.com/multi/alpha":       "example.com/multi/alpha",
+		"example.com/multi/alpha/inner": "example.com/multi/alpha",
+		"example.com/multi/beta/lib":    "example.com/multi/beta",
 	}
 
 	// Act

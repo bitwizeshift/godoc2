@@ -12,3 +12,13 @@ type Wrapper struct {
 func New() *Wrapper {
 	return &Wrapper{}
 }
+
+// Name returns the name of the wrapped unit.
+func (w *Wrapper) Name() string {
+	return w.Unit.Name()
+}
+
+// NewUnit returns a zero unit.
+func NewUnit() alpha.Unit {
+	return alpha.Unit{}
+}

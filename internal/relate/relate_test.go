@@ -141,6 +141,27 @@ func TestIndex_Constructors(t *testing.T) {
 	}
 }
 
+func TestIndex_Constructors_WithSeveralModules_OrdersByDistance(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	sut := relate.New(loadertest.Multi(t))
+	unit := loadertest.MultiType(t, loadertest.MultiAlphaPath, "", "Unit")
+	want := []funcGroupSummary{
+		{Path: "example.com/multi/alpha/inner", Funcs: []string{"NewUnit"}},
+		{Path: "example.com/multi", Funcs: []string{"NewUnit"}},
+		{Path: "example.com/multi/beta/lib", Funcs: []string{"NewUnit"}},
+	}
+
+	// Act
+	ctors := sut.Constructors(unit)
+
+	// Assert
+	if got, want := summarizeFuncGroups(ctors), want; !cmp.Equal(got, want) {
+		t.Errorf("Index.Constructors(...) mismatch (-want +got):\n%s", cmp.Diff(want, got))
+	}
+}
+
 func TestIndex_Utilities(t *testing.T) {
 	t.Parallel()
 
@@ -310,6 +331,29 @@ func TestGroups_PutsSamePackageFirst(t *testing.T) {
 
 	// Assert
 	if got, want := summarizeGroups(groups), want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+		t.Errorf("Groups(...) mismatch (-want +got):\n%s", cmp.Diff(want, got))
+	}
+}
+
+func TestGroups_WithSeveralModules_OrdersByDistance(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	sut := relate.New(loadertest.Multi(t))
+	namer := loadertest.MultiType(t, loadertest.MultiAlphaPath, "", "Namer")
+	impls := sut.Implementations(namer)
+	want := []groupSummary{
+		{Path: "", Names: []string{"Unit"}},
+		{Path: "example.com/multi/alpha/inner", Names: []string{"Inner"}},
+		{Path: "example.com/multi", Names: []string{"Root"}},
+		{Path: "example.com/multi/beta/lib", Names: []string{"Wrapper"}},
+	}
+
+	// Act
+	groups := relate.Groups(impls, namer)
+
+	// Assert
+	if got, want := summarizeGroups(groups), want; !cmp.Equal(got, want) {
 		t.Errorf("Groups(...) mismatch (-want +got):\n%s", cmp.Diff(want, got))
 	}
 }

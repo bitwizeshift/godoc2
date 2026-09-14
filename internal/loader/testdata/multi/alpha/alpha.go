@@ -10,3 +10,8 @@ type Unit struct{}
 func (Unit) Name() string {
 	return "unit"
 }
+
+// Namer is a value with a name.
+type Namer interface {
+	Name() string
+}
