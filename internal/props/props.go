@@ -67,11 +67,14 @@ func hasTypeParams(typ types.Type) bool {
 	return ok && named.TypeParams().Len() > 0 && named.TypeArgs().Len() == 0
 }
 
-// lockerType is the method set that marks a lock: sync.Locker.
+// lockerType is the method set that marks a lock: sync.Locker. It is
+// completed once here because [types.Implements] fills in the type set of an
+// incomplete interface on first use, which is not safe from several
+// goroutines.
 var lockerType = types.NewInterfaceType([]*types.Func{
 	types.NewFunc(token.NoPos, nil, "Lock", types.NewSignatureType(nil, nil, nil, nil, nil, false)),
 	types.NewFunc(token.NoPos, nil, "Unlock", types.NewSignatureType(nil, nil, nil, nil, nil, false)),
-}, nil)
+}, nil).Complete()
 
 // noncopiable reports whether typ must not be copied, with the rule of the
 // go vet copylocks check: a struct whose pointer type is a [sync.Locker]

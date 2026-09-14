@@ -309,7 +309,7 @@ func TestLoad_WithWorkspace_SetsPackageModule(t *testing.T) {
 	ctx := context.Background()
 	cfg := loader.Config{Dir: testdataDir(t, "multi"), Workspace: "go.work"}
 	want := map[string]string{
-		"example.com/multi":          "example.com/multi",
+		"example.com/multi":             "example.com/multi",
 		"example.com/multi/alpha":       "example.com/multi/alpha",
 		"example.com/multi/alpha/inner": "example.com/multi/alpha",
 		"example.com/multi/beta/lib":    "example.com/multi/beta",
