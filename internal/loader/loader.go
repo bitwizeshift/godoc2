@@ -21,8 +21,8 @@ import (
 )
 
 var (
-	// ErrNoModule is returned when no matched package belongs to a main module.
-	ErrNoModule = errors.New("no main module")
+	// ErrNoModule is returned when no matched package belongs to a module.
+	ErrNoModule = errors.New("no module")
 
 	// ErrLoad is returned when a package reports load or type errors.
 	ErrLoad = errors.New("load")
@@ -36,10 +36,15 @@ type Config struct {
 
 	// Patterns are the package patterns, such as "./...".
 	Patterns []string
+
+	// Workspace is the path of a go.work file, relative to Dir. When it is
+	// set, the go command runs in that workspace and every module the file
+	// uses is added to the patterns as "<dir>/...".
+	Workspace string
 }
 
 // Load calls [Load] with the configuration.
-func (c Config) Load(ctx context.Context) (*model.Module, error) {
+func (c Config) Load(ctx context.Context) (*model.Site, error) {
 	return Load(ctx, c)
 }
 
@@ -51,41 +56,46 @@ const loadMode = packages.NeedName |
 	packages.NeedImports |
 	packages.NeedModule
 
-// Load loads the packages matched by cfg and returns the module that owns
-// them.
+// Load loads the packages matched by cfg and returns the site of the modules
+// that own them. Every module with at least one matched package is part of
+// the site, so a pattern that names a dependency documents that dependency.
 //
-// It returns [ErrNoModule] if the matched packages have no main module, and
-// an error wrapping [ErrLoad] if a pattern did not match or a package failed
-// to load or type-check.
-func Load(ctx context.Context, cfg Config) (*model.Module, error) {
+// It returns [ErrNoModule] if no matched package belongs to a module, and an
+// error wrapping [ErrLoad] if the workspace file cannot be read, a pattern
+// did not match, or a package failed to load or type-check.
+func Load(ctx context.Context, cfg Config) (*model.Site, error) {
+	dir, err := filepath.Abs(cfg.Dir)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrLoad, err)
+	}
+	patterns, env, err := workspace(dir, cfg)
+	if err != nil {
+		return nil, err
+	}
 	fset := token.NewFileSet()
 	pkgs, err := packages.Load(&packages.Config{
 		Context: ctx,
 		Mode:    loadMode,
 		Dir:     cfg.Dir,
+		Env:     env,
 		Fset:    fset,
-	}, cfg.Patterns...)
+	}, patterns...)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrLoad, err)
 	}
 	if err := packageErrors(pkgs); err != nil {
 		return nil, err
 	}
-	main := mainModule(pkgs)
-	if main == nil {
-		return nil, ErrNoModule
-	}
 
-	mod := &model.Module{
-		Path:    main.Path,
-		Version: main.Version,
-		Dir:     main.Dir,
-		Fset:    fset,
-		Deps:    dependencies(pkgs),
-	}
+	site := &model.Site{Dir: dir, Fset: fset, Deps: dependencies(pkgs)}
 	for _, pkg := range pkgs {
-		if pkg.Module == nil || pkg.Module.Path != main.Path {
+		if pkg.Module == nil {
 			continue
+		}
+		mod := site.Module(pkg.Module.Path)
+		if mod == nil {
+			mod = &model.Module{Path: pkg.Module.Path, Version: pkg.Module.Version, Dir: pkg.Module.Dir}
+			site.Modules = append(site.Modules, mod)
 		}
 		p, err := newPackage(fset, mod, pkg)
 		if err != nil {
@@ -93,28 +103,51 @@ func Load(ctx context.Context, cfg Config) (*model.Module, error) {
 		}
 		mod.Packages = append(mod.Packages, p)
 	}
-	slices.SortFunc(mod.Packages, func(lhs, rhs *model.Package) int {
-		return strings.Compare(lhs.ImportPath, rhs.ImportPath)
+	if len(site.Modules) == 0 {
+		return nil, ErrNoModule
+	}
+	slices.SortFunc(site.Modules, func(lhs, rhs *model.Module) int {
+		return strings.Compare(lhs.Path, rhs.Path)
 	})
-	if err := moduleDocFile(mod); err != nil {
+	for _, mod := range site.Modules {
+		slices.SortFunc(mod.Packages, func(lhs, rhs *model.Package) int {
+			return strings.Compare(lhs.ImportPath, rhs.ImportPath)
+		})
+		if err := moduleDocFile(mod); err != nil {
+			return nil, err
+		}
+	}
+	if err := siteDocFile(site); err != nil {
 		return nil, err
 	}
-	return mod, nil
+	return site, nil
 }
 
 // moduleDocFile attaches the Markdown file of the module root when no
 // package lives there.
 func moduleDocFile(mod *model.Module) error {
-	for _, p := range mod.Packages {
-		if p.RelPath == "" {
-			return nil
-		}
+	if mod.Root() != nil {
+		return nil
 	}
 	f, err := docfile.Find(mod.Dir)
 	if err != nil {
 		return fmt.Errorf("%w: %s: %w", ErrLoad, mod.Path, err)
 	}
 	mod.DocFile = f
+	return nil
+}
+
+// siteDocFile attaches the Markdown file of the site directory when the site
+// holds more than one module.
+func siteDocFile(site *model.Site) error {
+	if len(site.Modules) < 2 {
+		return nil
+	}
+	f, err := docfile.Find(site.Dir)
+	if err != nil {
+		return fmt.Errorf("%w: %s: %w", ErrLoad, site.Dir, err)
+	}
+	site.DocFile = f
 	return nil
 }
 
@@ -130,16 +163,6 @@ func packageErrors(pkgs []*packages.Package) error {
 			msgs = append(msgs, e.Error())
 		}
 		return fmt.Errorf("%w: %s: %s", ErrLoad, pkg.PkgPath, strings.Join(msgs, "; "))
-	}
-	return nil
-}
-
-// mainModule returns the main module of the first package that has one.
-func mainModule(pkgs []*packages.Package) *packages.Module {
-	for _, pkg := range pkgs {
-		if pkg.Module != nil && pkg.Module.Main {
-			return pkg.Module
-		}
 	}
 	return nil
 }
@@ -189,6 +212,7 @@ func newPackage(fset *token.FileSet, mod *model.Module, pkg *packages.Package) (
 		Name:       pkg.Name,
 		RelPath:    strings.TrimPrefix(strings.TrimPrefix(pkg.PkgPath, mod.Path), "/"),
 		Dir:        dir,
+		Module:     mod,
 		Doc:        dpkg.Doc,
 		TypesPkg:   pkg.Types,
 		Info:       pkg.TypesInfo,

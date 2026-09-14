@@ -71,6 +71,44 @@ func summarize(pkgs []*model.Package) []packageSummary {
 	return result
 }
 
+// moduleSummary is the comparable projection of a [model.Module].
+type moduleSummary struct {
+	Path     string
+	Dir      string
+	DocFile  string
+	Packages []string
+}
+
+func modulePaths(site *model.Site) []string {
+	var paths []string
+	for _, m := range site.Modules {
+		paths = append(paths, m.Path)
+	}
+	return paths
+}
+
+// summarizeModules projects the modules of site with directories relative
+// to the site directory.
+func summarizeModules(t testing.TB, site *model.Site) []moduleSummary {
+	t.Helper()
+	var result []moduleSummary
+	for _, m := range site.Modules {
+		dir, err := filepath.Rel(site.Dir, m.Dir)
+		if err != nil {
+			t.Fatalf("Rel(...) = %v, want nil", err)
+		}
+		s := moduleSummary{Path: m.Path, Dir: filepath.ToSlash(dir)}
+		if m.DocFile != nil {
+			s.DocFile = filepath.Base(m.DocFile.Path)
+		}
+		for _, p := range m.Packages {
+			s.Packages = append(s.Packages, p.ImportPath)
+		}
+		result = append(result, s)
+	}
+	return result
+}
+
 func fixtureDir(t testing.TB) string {
 	t.Helper()
 	return testdataDir(t, "sample")
@@ -172,20 +210,23 @@ func TestLoad_WithFixtureModule_ReturnsModule(t *testing.T) {
 	}
 
 	// Act
-	mod, err := loader.Load(ctx, cfg)
+	site, err := loader.Load(ctx, cfg)
 
 	// Assert
 	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
 		t.Fatalf("Load(...) = %v, want nil", got)
 	}
-	if got, want := mod.Path, "example.com/sample"; !cmp.Equal(got, want) {
-		t.Errorf("Load(...) Path = %q, want %q", got, want)
+	if got, want := modulePaths(site), []string{"example.com/sample"}; !cmp.Equal(got, want) {
+		t.Fatalf("Load(...) modules = %q, want %q", got, want)
 	}
-	if got, want := summarize(mod.Packages), want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+	if got, want := summarize(site.Modules[0].Packages), want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
 		t.Errorf("Load(...) packages mismatch (-want +got):\n%s", cmp.Diff(want, got))
 	}
-	if got, want := mod.DocFile, (*model.DocFile)(nil); !cmp.Equal(got, want) {
-		t.Errorf("Load(...) DocFile = %v, want nil", got)
+	if got, want := site.Modules[0].DocFile, (*model.DocFile)(nil); !cmp.Equal(got, want) {
+		t.Errorf("Load(...) module DocFile = %v, want nil", got)
+	}
+	if got, want := site.DocFile, (*model.DocFile)(nil); !cmp.Equal(got, want) {
+		t.Errorf("Load(...) site DocFile = %v, want nil", got)
 	}
 }
 
@@ -202,15 +243,97 @@ func TestLoad_WithBareModule_AttachesRootDocFile(t *testing.T) {
 	}
 
 	// Act
-	mod, err := loader.Load(ctx, cfg)
+	site, err := loader.Load(ctx, cfg)
 
 	// Assert
 	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
 		t.Fatalf("Load(...) = %v, want nil", got)
 	}
-	if got, want := mod.DocFile, want; !cmp.Equal(got, want) {
+	if got, want := site.Modules[0].DocFile, want; !cmp.Equal(got, want) {
 		t.Errorf("Load(...) DocFile mismatch (-want +got):\n%s", cmp.Diff(want, got))
 	}
+}
+
+func TestLoad_WithWorkspace_ReturnsEveryModule(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	ctx := context.Background()
+	dir := testdataDir(t, "multi")
+	cfg := loader.Config{Dir: dir, Workspace: "go.work"}
+	wantModules := []moduleSummary{
+		{
+			Path:     "example.com/multi",
+			Dir:      ".",
+			Packages: []string{"example.com/multi"},
+		},
+		{
+			Path:     "example.com/multi/alpha",
+			Dir:      "alpha",
+			Packages: []string{"example.com/multi/alpha"},
+		},
+		{
+			Path:     "example.com/multi/beta",
+			Dir:      "beta",
+			DocFile:  "README.md",
+			Packages: []string{"example.com/multi/beta/lib"},
+		},
+	}
+	wantDocFile := &model.DocFile{
+		Path: filepath.Join(dir, "README.md"),
+		Text: "# Multi\n\nTwo modules live in this directory.\n\nSee [alpha](alpha), [beta](beta), [the wrapper](beta/lib/lib.go#L7), and\n[the notes](docs/notes.md).\n",
+	}
+
+	// Act
+	site, err := loader.Load(ctx, cfg)
+
+	// Assert
+	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Load(...) = %v, want nil", got)
+	}
+	if got, want := site.Dir, dir; !cmp.Equal(got, want) {
+		t.Errorf("Load(...) Dir = %q, want %q", got, want)
+	}
+	if got, want := summarizeModules(t, site), wantModules; !cmp.Equal(got, want) {
+		t.Errorf("Load(...) modules mismatch (-want +got):\n%s", cmp.Diff(want, got))
+	}
+	if got, want := site.DocFile, wantDocFile; !cmp.Equal(got, want) {
+		t.Errorf("Load(...) site DocFile mismatch (-want +got):\n%s", cmp.Diff(want, got))
+	}
+}
+
+func TestLoad_WithWorkspace_SetsPackageModule(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	ctx := context.Background()
+	cfg := loader.Config{Dir: testdataDir(t, "multi"), Workspace: "go.work"}
+	want := map[string]string{
+		"example.com/multi":          "example.com/multi",
+		"example.com/multi/alpha":    "example.com/multi/alpha",
+		"example.com/multi/beta/lib": "example.com/multi/beta",
+	}
+
+	// Act
+	site, err := loader.Load(ctx, cfg)
+
+	// Assert
+	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Load(...) = %v, want nil", got)
+	}
+	if got, want := packageModules(site), want; !cmp.Equal(got, want) {
+		t.Errorf("Load(...) package modules mismatch (-want +got):\n%s", cmp.Diff(want, got))
+	}
+}
+
+// packageModules maps every package import path to the path of the module
+// that owns it.
+func packageModules(site *model.Site) map[string]string {
+	result := map[string]string{}
+	for _, p := range site.Packages() {
+		result[p.ImportPath] = p.Module.Path
+	}
+	return result
 }
 
 func TestLoad_WithFixtureModule_AssignsExamples(t *testing.T) {
@@ -240,13 +363,13 @@ func TestLoad_WithFixtureModule_AssignsExamples(t *testing.T) {
 	}
 
 	// Act
-	mod, err := loader.Load(ctx, cfg)
+	site, err := loader.Load(ctx, cfg)
 
 	// Assert
 	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
 		t.Fatalf("Load(...) = %v, want nil", got)
 	}
-	if got, want := examplesOf(mod.Packages[0]), want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+	if got, want := examplesOf(site.Modules[0].Packages[0]), want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
 		t.Errorf("Load(...) examples mismatch (-want +got):\n%s", cmp.Diff(want, got))
 	}
 }
@@ -275,9 +398,10 @@ func TestLoad(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name     string
-		patterns []string
-		wantErr  error
+		name      string
+		patterns  []string
+		workspace string
+		wantErr   error
 	}{
 		{
 			name:     "no match",
@@ -294,6 +418,16 @@ func TestLoad(t *testing.T) {
 			patterns: []string{"example.com/sample/missing"},
 			wantErr:  loader.ErrLoad,
 		},
+		{
+			name:      "missing workspace file",
+			workspace: "nosuch.work",
+			wantErr:   loader.ErrLoad,
+		},
+		{
+			name:      "workspace file is not go.work syntax",
+			workspace: "go.mod",
+			wantErr:   loader.ErrLoad,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -302,17 +436,17 @@ func TestLoad(t *testing.T) {
 
 			// Arrange
 			ctx := context.Background()
-			cfg := loader.Config{Dir: fixtureDir(t), Patterns: tc.patterns}
+			cfg := loader.Config{Dir: fixtureDir(t), Patterns: tc.patterns, Workspace: tc.workspace}
 
 			// Act
-			mod, err := loader.Load(ctx, cfg)
+			site, err := loader.Load(ctx, cfg)
 
 			// Assert
 			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
 				t.Fatalf("Load(...) = %v, want %v", got, want)
 			}
-			if got, want := mod, (*model.Module)(nil); !cmp.Equal(got, want) {
-				t.Errorf("Load(...) module = %v, want nil", got)
+			if got, want := site, (*model.Site)(nil); !cmp.Equal(got, want) {
+				t.Errorf("Load(...) site = %v, want nil", got)
 			}
 		})
 	}

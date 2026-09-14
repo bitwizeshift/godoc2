@@ -14,25 +14,63 @@ import (
 
 const noExportedMessage = "This package has no exported identifiers."
 
-// modulePage builds the module page, which is the page of the root package
-// with the Tools and Packages tables.
-func (b *builder) modulePage(root *model.Package) *page {
-	pg := b.newPage(b.r.module.Path)
-	pg.Breadcrumb = b.breadcrumb(root)
-	pg.Heading = heading{Kind: "module", Name: b.r.module.Path}
+// rootTitle is the heading of the root page of a site with several modules.
+const rootTitle = "Modules"
+
+// rootPage builds the root page of a site with several modules: the
+// Markdown file of the site directory, then the Modules table.
+func (b *builder) rootPage() *page {
+	pg := b.newPage(rootTitle, nil)
+	pg.Breadcrumb = []crumb{b.rootCrumb()}
+	pg.Heading = heading{Name: rootTitle}
+	var doc *markdown.Document
+	if b.r.site.DocFile != nil {
+		doc = b.docFile(b.r.site.DocFile)
+	}
+	modules := b.modulesSection()
+	pg.Sections = appendSection(pg.Sections, b.docSection(doc))
+	pg.Sections = appendSection(pg.Sections, modules)
+	pg.Sidebar = appendSidebar(pg.Sidebar, new(b.docSidebar(doc)))
+	pg.Sidebar = appendSidebar(pg.Sidebar, sidebarOf(modules))
+	return pg
+}
+
+// modulesSection lists every module of the site with the summary of its
+// documentation.
+func (b *builder) modulesSection() *section {
+	var rows []tableRow
+	for _, mod := range b.r.site.Modules {
+		summary, _ := b.summaryAndFull(b.moduleDoc(mod, mod.Root()))
+		rows = append(rows, tableRow{
+			Name:       mod.Path,
+			Href:       b.rel(pathmap.Module(mod.Path)),
+			Deprecated: mod.Deprecated(),
+			Summary:    summary,
+		})
+	}
+	return &section{ID: "modules", Title: rootTitle, Kind: kindTable, Rows: rows}
+}
+
+// modulePage builds the page of mod, which is the page of its root package
+// with the Tools and Packages tables. root is nil for a module without a
+// root package.
+func (b *builder) modulePage(mod *model.Module, root *model.Package) *page {
+	pg := b.newPage(mod.Path, mod)
+	pg.Breadcrumb = b.breadcrumb(mod, root)
+	pg.Heading = heading{Kind: "module", Name: mod.Path}
 	if root != nil {
 		pg.Heading = heading{Kind: "package", Name: root.DisplayName()}
 		pg.Title = root.ImportPath
 	}
-	doc := b.moduleDoc(root)
-	tools := b.toolsSection()
-	packages := b.packagesSection("")
+	doc := b.moduleDoc(mod, root)
+	tools := b.toolsSection(mod)
+	packages := b.packagesSection(mod, "")
 	pg.Sections = appendSection(pg.Sections, b.docSection(doc))
 	pg.Sections = appendSection(pg.Sections, tools)
 	pg.Sections = appendSection(pg.Sections, packages)
 	pg.Sidebar = appendSidebar(pg.Sidebar, new(b.docSidebar(doc)))
 	pg.Sidebar = appendSidebar(pg.Sidebar, sidebarOf(tools))
-	pg.Sidebar = appendSidebar(pg.Sidebar, b.treeSidebar(packages, root))
+	pg.Sidebar = appendSidebar(pg.Sidebar, b.treeSidebar(packages, mod, root))
 	if root != nil {
 		b.addPackageMembers(pg, root, tools != nil || packages != nil)
 	}
@@ -41,30 +79,30 @@ func (b *builder) modulePage(root *model.Package) *page {
 
 // moduleDoc parses the documentation of the module page: that of the root
 // package, or else the Markdown file of the module root.
-func (b *builder) moduleDoc(root *model.Package) *markdown.Document {
+func (b *builder) moduleDoc(mod *model.Module, root *model.Package) *markdown.Document {
 	if root != nil {
-		return b.packageDoc(root)
+		return b.withPackage(root).packageDoc(root)
 	}
-	if b.r.module.DocFile != nil {
-		return b.docFile(b.r.module.DocFile)
+	if mod.DocFile != nil {
+		return b.docFile(mod.DocFile)
 	}
 	return nil
 }
 
 // packagePage builds the page of a package below the module root.
 func (b *builder) packagePage(p *model.Package) *page {
-	pg := b.newPage(p.ImportPath)
-	pg.Breadcrumb = b.breadcrumb(p)
+	pg := b.newPage(p.ImportPath, p.Module)
+	pg.Breadcrumb = b.breadcrumb(p.Module, p)
 	pg.Heading = heading{Kind: "package", Name: p.DisplayName(), Internal: p.Internal(), Deprecated: p.Deprecated()}
 	if p.Tool() {
 		pg.Heading.Kind = "binary"
 	}
 	doc := b.packageDoc(p)
-	packages := b.packagesSection(p.RelPath)
+	packages := b.packagesSection(p.Module, p.RelPath)
 	pg.Sections = appendSection(pg.Sections, b.docSection(doc))
 	pg.Sections = appendSection(pg.Sections, packages)
 	pg.Sidebar = appendSidebar(pg.Sidebar, new(b.docSidebar(doc)))
-	pg.Sidebar = appendSidebar(pg.Sidebar, b.treeSidebar(packages, p))
+	pg.Sidebar = appendSidebar(pg.Sidebar, b.treeSidebar(packages, p.Module, p))
 	b.addPackageMembers(pg, p, packages != nil)
 	return pg
 }
@@ -87,10 +125,10 @@ func (b *builder) addPackageMembers(pg *page, p *model.Package, hasTables bool) 
 	}
 }
 
-// toolsSection lists the main packages of the module.
-func (b *builder) toolsSection() *section {
+// toolsSection lists the main packages of mod.
+func (b *builder) toolsSection(mod *model.Module) *section {
 	var rows []tableRow
-	for _, p := range b.r.module.Packages {
+	for _, p := range mod.Packages {
 		if p.Tool() {
 			rows = append(rows, b.packageRow(p, p.DisplayName()))
 		}
@@ -101,14 +139,14 @@ func (b *builder) toolsSection() *section {
 	return &section{ID: "tools", Title: "Tools", Kind: kindTable, Rows: rows}
 }
 
-// packagesSection lists the non-main packages below rel.
-func (b *builder) packagesSection(rel string) *section {
+// packagesSection lists the non-main packages of mod below rel.
+func (b *builder) packagesSection(mod *model.Module, rel string) *section {
 	prefix := ""
 	if rel != "" {
 		prefix = rel + "/"
 	}
 	var rows []tableRow
-	for _, p := range b.r.module.Packages {
+	for _, p := range mod.Packages {
 		if p.Tool() || p.RelPath == "" || !strings.HasPrefix(p.RelPath, prefix) {
 			continue
 		}
@@ -125,7 +163,7 @@ func (b *builder) packageRow(p *model.Package, name string) tableRow {
 	summary, _ := scoped.summaryAndFull(scoped.packageDoc(p))
 	return tableRow{
 		Name:       name,
-		Href:       b.rel(pathmap.Package(b.r.module.Path, p.RelPath)),
+		Href:       b.rel(pathmap.Package(p.Module.Path, p.RelPath)),
 		Internal:   p.Internal(),
 		Deprecated: p.Deprecated(),
 		Summary:    summary,
@@ -142,8 +180,8 @@ func (b *builder) withPackage(p *model.Package) *builder {
 
 // typePage builds the page of a type.
 func (b *builder) typePage(t *model.Type) *page {
-	pg := b.newPage(t.Pkg.ImportPath + "." + t.Name)
-	pg.Breadcrumb = b.breadcrumb(t.Pkg, crumb{Text: t.Name, Href: ""})
+	pg := b.newPage(t.Pkg.ImportPath+"."+t.Name, t.Pkg.Module)
+	pg.Breadcrumb = b.breadcrumb(t.Pkg.Module, t.Pkg, crumb{Text: t.Name, Href: ""})
 	pg.Heading = heading{Kind: t.Kind.String(), Name: t.Name, Internal: t.Pkg.Internal(), Deprecated: t.Deprecated()}
 	pg.SourceHref = b.sourceHref(t.Spec)
 	pg.Definition = b.code(b.printer("").Type(t))
@@ -188,13 +226,13 @@ func (b *builder) funcPage(f *model.Func) *page {
 	if f.Recv != nil {
 		symbols = append(symbols, crumb{
 			Text: f.Recv.Name,
-			Href: b.rel(pathmap.Symbol(b.r.module.Path, f.Pkg.RelPath, f.Recv.Name)),
+			Href: b.rel(pathmap.Symbol(f.Pkg.Module.Path, f.Pkg.RelPath, f.Recv.Name)),
 		})
 		title = f.Pkg.ImportPath + "." + f.Recv.Name + "." + f.Name
 	}
 	symbols = append(symbols, crumb{Text: f.Name})
-	pg := b.newPage(title)
-	pg.Breadcrumb = b.breadcrumb(f.Pkg, symbols...)
+	pg := b.newPage(title, f.Pkg.Module)
+	pg.Breadcrumb = b.breadcrumb(f.Pkg.Module, f.Pkg, symbols...)
 	pg.Heading = heading{Kind: "func", Name: f.Name, Internal: f.Pkg.Internal(), Deprecated: f.Deprecated()}
 	pg.SourceHref = b.sourceHref(f.Decl)
 	pg.Definition = b.code(b.printer("").Func(f))
@@ -204,8 +242,8 @@ func (b *builder) funcPage(f *model.Func) *page {
 
 // valuePage builds the page of a constant or variable.
 func (b *builder) valuePage(v *model.Value) *page {
-	pg := b.newPage(v.Pkg.ImportPath + "." + v.Name)
-	pg.Breadcrumb = b.breadcrumb(v.Pkg, crumb{Text: v.Name})
+	pg := b.newPage(v.Pkg.ImportPath+"."+v.Name, v.Pkg.Module)
+	pg.Breadcrumb = b.breadcrumb(v.Pkg.Module, v.Pkg, crumb{Text: v.Name})
 	pg.Heading = heading{Kind: v.Kind.String(), Name: v.Name, Internal: v.Pkg.Internal(), Deprecated: v.Deprecated()}
 	if v.Spec != nil {
 		pg.SourceHref = b.sourceHref(v.Spec)
@@ -231,8 +269,8 @@ func (b *builder) sourcePage(p *model.Package, file *model.File, src []byte) (*p
 	if err := b.r.highlight.Source(&out, src); err != nil {
 		return nil, err
 	}
-	pg := b.newPage(p.ImportPath + "/" + file.Name)
-	pg.Breadcrumb = b.breadcrumb(p, crumb{Text: file.Name, Separator: "/"})
+	pg := b.newPage(p.ImportPath+"/"+file.Name, p.Module)
+	pg.Breadcrumb = b.breadcrumb(p.Module, p, crumb{Text: file.Name, Separator: "/"})
 	pg.Heading = heading{Kind: "file", Name: file.Name, Internal: p.Internal()}
 	pg.Sections = []section{{ID: "source", Kind: kindRaw, HTML: template.HTML(out.String())}}
 	pg.Sidebar = []sidebarSection{{Title: "Files", Items: b.fileItems(p)}}
@@ -244,7 +282,7 @@ func (b *builder) fileItems(p *model.Package) []sidebarItem {
 	for _, f := range p.Files {
 		items = append(items, sidebarItem{
 			Text: f.Name,
-			Href: b.rel(pathmap.Source(b.r.module.Path, p.RelPath, f.Name)),
+			Href: b.rel(pathmap.Source(p.Module.Path, p.RelPath, f.Name)),
 		})
 	}
 	return items
@@ -283,14 +321,14 @@ func findNode(nodes []*treeNode, text string) *treeNode {
 
 // treeSidebar returns the sidebar entry of a package table as a tree rooted
 // at the page package. p is nil for a module without a root package.
-func (b *builder) treeSidebar(s *section, p *model.Package) *sidebarSection {
+func (b *builder) treeSidebar(s *section, mod *model.Module, p *model.Package) *sidebarSection {
 	if s == nil {
 		return nil
 	}
-	root := &treeNode{Text: path.Base(b.r.module.Path), Href: b.rel(pathmap.Module(b.r.module.Path))}
+	root := &treeNode{Text: path.Base(mod.Path), Href: b.rel(pathmap.Module(mod.Path))}
 	if p != nil {
 		root.Text = p.DisplayName()
-		root.Href = b.rel(pathmap.Package(b.r.module.Path, p.RelPath))
+		root.Href = b.rel(pathmap.Package(mod.Path, p.RelPath))
 		root.Internal = p.Internal()
 		root.Deprecated = p.Deprecated()
 	}

@@ -8,40 +8,40 @@ import (
 )
 
 // ExternalBase is the documentation site used for packages outside the
-// module.
+// site.
 const ExternalBase = "https://pkg.go.dev/"
 
 // Resolver maps objects to documentation URLs.
 type Resolver struct {
-	module   *model.Module
+	site     *model.Site
 	packages map[string]*model.Package
 }
 
-// New returns a [Resolver] for the module.
-func New(mod *model.Module) *Resolver {
-	pkgs := make(map[string]*model.Package, len(mod.Packages))
-	for _, p := range mod.Packages {
+// New returns a [Resolver] for the modules of site.
+func New(site *model.Site) *Resolver {
+	pkgs := map[string]*model.Package{}
+	for _, p := range site.Packages() {
 		pkgs[p.ImportPath] = p
 	}
-	return &Resolver{module: mod, packages: pkgs}
+	return &Resolver{site: site, packages: pkgs}
 }
 
-// Local reports whether the package at importPath belongs to the module.
+// Local reports whether the package at importPath belongs to the site.
 func (r *Resolver) Local(importPath string) bool {
 	_, ok := r.packages[importPath]
 	return ok
 }
 
-// Package returns the module package at importPath, or nil.
+// Package returns the site package at importPath, or nil.
 func (r *Resolver) Package(importPath string) *model.Package {
 	return r.packages[importPath]
 }
 
-// PackageNamed returns the module package with the given package name when
+// PackageNamed returns the site package with the given package name when
 // exactly one exists, and nil otherwise.
 func (r *Resolver) PackageNamed(name string) *model.Package {
 	var found *model.Package
-	for _, p := range r.module.Packages {
+	for _, p := range r.site.Packages() {
 		if p.Name != name {
 			continue
 		}
@@ -83,7 +83,7 @@ func (r *Resolver) URL(from string, obj types.Object) (string, bool) {
 // the package at importPath.
 func (r *Resolver) PackageURL(from, importPath string) string {
 	if p, ok := r.packages[importPath]; ok {
-		return pathmap.Rel(from, pathmap.Package(r.module.Path, p.RelPath))
+		return pathmap.Rel(from, pathmap.Package(p.Module.Path, p.RelPath))
 	}
 	return r.externalPackage(importPath)
 }
@@ -114,9 +114,9 @@ func (r *Resolver) Lookup(from string, pkg *types.Package, name, method string) 
 func (r *Resolver) local(from string, p *model.Package, recv, name string) string {
 	var to string
 	if recv != "" {
-		to = pathmap.Method(r.module.Path, p.RelPath, recv, name)
+		to = pathmap.Method(p.Module.Path, p.RelPath, recv, name)
 	} else {
-		to = pathmap.Symbol(r.module.Path, p.RelPath, name)
+		to = pathmap.Symbol(p.Module.Path, p.RelPath, name)
 	}
 	return pathmap.Rel(from, to)
 }
@@ -131,7 +131,7 @@ func (r *Resolver) external(importPath, recv, name string) string {
 
 func (r *Resolver) externalPackage(importPath string) string {
 	url := ExternalBase + importPath
-	if dep, ok := r.module.Deps[importPath]; ok && dep.Version != "" {
+	if dep, ok := r.site.Deps[importPath]; ok && dep.Version != "" {
 		url += "@" + dep.Version
 	}
 	return url

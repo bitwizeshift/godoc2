@@ -8,9 +8,13 @@ import (
 
 // page is the view model of every page.
 type page struct {
-	Title      string
-	ModulePath string
-	ModuleHref string
+	Title string
+
+	// HomeHref and HomeTitle are the target and title of the sidebar logo:
+	// the module page, or the root page of a site with several modules.
+	HomeHref  string
+	HomeTitle string
+
 	CSS        string
 	JS         string
 	IndexJS    string
@@ -23,13 +27,19 @@ type page struct {
 	Sections   []section
 }
 
+// redirect is the view model of the root page of a single-module site.
+type redirect struct {
+	Title string
+	Href  string
+}
+
 // crumb is one element of the breadcrumb path.
 type crumb struct {
 	Text string
 	Href string
 
-	// Module marks the leading module badge.
-	Module bool
+	// Badge marks the leading module and modules badges.
+	Badge bool
 
 	// Separator precedes the element: "/" between directories, "." between
 	// symbols, or empty for the first element.
@@ -65,6 +75,8 @@ type sidebarItem struct {
 	Deprecated string
 }
 
+// heading is the page title. Kind is the keyword before the name, or empty
+// for a plain title.
 type heading struct {
 	Kind       string
 	Name       string

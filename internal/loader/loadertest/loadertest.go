@@ -17,38 +17,56 @@ const SamplePath = "example.com/sample"
 // BarePath is the module path of the fixture module without a root package.
 const BarePath = "example.com/bare"
 
-// fixture loads one fixture module once per test binary.
+// Module paths of the multi fixture: a root module with two nested modules
+// in one go.work workspace.
+const (
+	MultiPath      = "example.com/multi"
+	MultiAlphaPath = "example.com/multi/alpha"
+	MultiBetaPath  = "example.com/multi/beta"
+)
+
+// fixture loads one fixture site once per test binary.
 type fixture struct {
-	dir  string
-	once sync.Once
-	mod  *model.Module
-	err  error
+	dir       string
+	workspace string
+	once      sync.Once
+	site      *model.Site
+	err       error
 }
 
-func (f *fixture) load(t testing.TB) *model.Module {
+func (f *fixture) load(t testing.TB) *model.Site {
 	t.Helper()
 	f.once.Do(func() {
-		f.mod, f.err = loader.Load(context.Background(), loader.Config{
-			Dir:      f.dir,
-			Patterns: []string{"./..."},
-		})
+		cfg := loader.Config{Dir: f.dir, Workspace: f.workspace}
+		if f.workspace == "" {
+			cfg.Patterns = []string{"./..."}
+		}
+		f.site, f.err = loader.Load(context.Background(), cfg)
 	})
 	if f.err != nil {
 		t.Fatalf("loader.Load(...) = %v, want nil", f.err)
 	}
-	return f.mod
+	return f.site
 }
 
 var (
 	sample = &fixture{dir: fixtureDir("sample")}
 	bare   = &fixture{dir: fixtureDir("bare")}
+	multi  = &fixture{dir: fixtureDir("multi"), workspace: "go.work"}
 )
 
-// Sample returns the loaded fixture module. The module is loaded once per
-// test binary and shared, so callers must not modify it.
-func Sample(t testing.TB) *model.Module {
+// Sample returns the loaded fixture site, which holds the sample module. The
+// site is loaded once per test binary and shared, so callers must not modify
+// it.
+func Sample(t testing.TB) *model.Site {
 	t.Helper()
 	return sample.load(t)
+}
+
+// SampleModule returns the sample module of the fixture site.
+func SampleModule(t testing.TB) *model.Module {
+	t.Helper()
+	return Sample(t).Modules[0]
 }
 
 // SampleDir returns the absolute directory of the fixture module.
@@ -56,10 +74,10 @@ func SampleDir() string {
 	return sample.dir
 }
 
-// Bare returns the loaded fixture module that has a README.md and no package
-// in its root directory. The module is loaded once per test binary and
-// shared, so callers must not modify it.
-func Bare(t testing.TB) *model.Module {
+// Bare returns the loaded fixture site of the module that has a README.md
+// and no package in its root directory. The site is loaded once per test
+// binary and shared, so callers must not modify it.
+func Bare(t testing.TB) *model.Site {
 	t.Helper()
 	return bare.load(t)
 }
@@ -69,16 +87,58 @@ func BareDir() string {
 	return bare.dir
 }
 
+// Multi returns the loaded fixture site of the go.work workspace with three
+// modules. The site is loaded once per test binary and shared, so callers
+// must not modify it.
+func Multi(t testing.TB) *model.Site {
+	t.Helper()
+	return multi.load(t)
+}
+
+// MultiDir returns the absolute directory of the multi fixture workspace.
+func MultiDir() string {
+	return multi.dir
+}
+
+// MultiPackage returns the package at rel inside the multi fixture module
+// at modulePath. It fails the test when the package does not exist.
+func MultiPackage(t testing.TB, modulePath, rel string) *model.Package {
+	t.Helper()
+	if mod := Multi(t).Module(modulePath); mod != nil {
+		for _, p := range mod.Packages {
+			if p.RelPath == rel {
+				return p
+			}
+		}
+	}
+	t.Fatalf("MultiPackage(%q, %q): not found in fixture", modulePath, rel)
+	return nil
+}
+
+// MultiType returns the named type from the multi fixture package at rel
+// inside the module at modulePath. It fails the test when the type does not
+// exist.
+func MultiType(t testing.TB, modulePath, rel, name string) *model.Type {
+	t.Helper()
+	for _, typ := range MultiPackage(t, modulePath, rel).Types {
+		if typ.Name == name {
+			return typ
+		}
+	}
+	t.Fatalf("MultiType(%q, %q, %q): not found in fixture", modulePath, rel, name)
+	return nil
+}
+
 func fixtureDir(name string) string {
 	_, file, _, _ := runtime.Caller(0)
 	return filepath.Join(filepath.Dir(file), "..", "testdata", name)
 }
 
-// Package returns the fixture package with the given path relative to the
+// Package returns the sample package with the given path relative to the
 // module root. It fails the test when the package does not exist.
 func Package(t testing.TB, rel string) *model.Package {
 	t.Helper()
-	for _, p := range Sample(t).Packages {
+	for _, p := range SampleModule(t).Packages {
 		if p.RelPath == rel {
 			return p
 		}

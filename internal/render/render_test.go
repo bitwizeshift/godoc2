@@ -23,9 +23,9 @@ func newRenderer(t testing.TB) *render.Renderer {
 	return newRendererFor(t, loadertest.Sample(t))
 }
 
-func newRendererFor(t testing.TB, mod *model.Module) *render.Renderer {
+func newRendererFor(t testing.TB, site *model.Site) *render.Renderer {
 	t.Helper()
-	r, err := render.New(mod, link.New(mod), relate.New(mod), docfile.NewResolver(mod))
+	r, err := render.New(site, link.New(site), relate.New(site), docfile.NewResolver(site))
 	if err != nil {
 		t.Fatalf("render.New(...) = %v, want nil", err)
 	}
@@ -61,7 +61,7 @@ func TestRenderer_Module(t *testing.T) {
 
 	// Arrange
 	sut := newRenderer(t)
-	root := loadertest.Package(t, "")
+	mod := loadertest.SampleModule(t)
 	var out strings.Builder
 	wantSections := []string{"documentation", "tools", "packages", "examples", "constants", "variables", "types", "functions"}
 	wantFragments := fragments{
@@ -88,7 +88,7 @@ func TestRenderer_Module(t *testing.T) {
 	}
 
 	// Act
-	err := sut.Module(&out, root)
+	err := sut.Module(&out, mod)
 	html := out.String()
 
 	// Assert
@@ -107,7 +107,8 @@ func TestRenderer_Module_WithoutRootPackage_UsesModuleDocFile(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	sut := newRendererFor(t, loadertest.Bare(t))
+	bare := loadertest.Bare(t)
+	sut := newRendererFor(t, bare)
 	var out strings.Builder
 	wantSections := []string{"documentation", "packages"}
 	wantFragments := fragments{
@@ -119,7 +120,7 @@ func TestRenderer_Module_WithoutRootPackage_UsesModuleDocFile(t *testing.T) {
 	}
 
 	// Act
-	err := sut.Module(&out, nil)
+	err := sut.Module(&out, bare.Modules[0])
 	html := out.String()
 
 	// Assert
@@ -131,6 +132,122 @@ func TestRenderer_Module_WithoutRootPackage_UsesModuleDocFile(t *testing.T) {
 	}
 	if got, want := missing(html, wantFragments), []string(nil); !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
 		t.Errorf("Renderer.Module(...) missing fragments:\n%s", strings.Join(got, "\n"))
+	}
+}
+
+func TestRenderer_Root_WithOneModule_Redirects(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	sut := newRenderer(t)
+	var out strings.Builder
+	wantFragments := fragments{
+		`<meta http-equiv="refresh" content="0; url=example.com/sample/index.html">`,
+		`<link rel="canonical" href="example.com/sample/index.html">`,
+		`<title>example.com/sample</title>`,
+		`<a href="example.com/sample/index.html">example.com/sample</a>`,
+	}
+
+	// Act
+	err := sut.Root(&out)
+	html := out.String()
+
+	// Assert
+	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Renderer.Root(...) = %v, want nil", got)
+	}
+	if got, want := missing(html, wantFragments), []string(nil); !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+		t.Errorf("Renderer.Root(...) missing fragments:\n%s", strings.Join(got, "\n"))
+	}
+}
+
+func TestRenderer_Root_WithSeveralModules_ListsModules(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	sut := newRendererFor(t, loadertest.Multi(t))
+	var out strings.Builder
+	wantSections := []string{"documentation", "modules"}
+	wantFragments := fragments{
+		`<title>Modules</title>`,
+		`<a class="sidebar-logo" href="index.html" title="Modules" aria-label="Modules">`,
+		`<a class="badge badge-module" href="index.html">modules</a>`,
+		`<h1>Modules</h1>`,
+		`<h1 id="multi">Multi</h1>`,
+		`<a href="example.com/multi/alpha/index.html">alpha</a>`,
+		`<a href="example.com/multi/beta/index.html">beta</a>`,
+		`<a href="example.com/multi/beta/lib/lib.go.html#L7">the wrapper</a>`,
+		`<a href="example.com/multi/docs/notes.md">the notes</a>`,
+		`<td><a href="example.com/multi/index.html">example.com/multi</a></td>`,
+		`<td class="summary"><p>Package multi is the root module of the multi fixture.</p>`,
+		`<td><a href="example.com/multi/alpha/index.html">example.com/multi/alpha</a></td>`,
+		`<td><a href="example.com/multi/beta/index.html">example.com/multi/beta</a></td>`,
+		`<td class="summary"><p>Module beta has no package in its root directory.</p>`,
+		`<li><a href="example.com/multi/beta/index.html">example.com/multi/beta</a></li>`,
+	}
+
+	// Act
+	err := sut.Root(&out)
+	html := out.String()
+
+	// Assert
+	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Renderer.Root(...) = %v, want nil", got)
+	}
+	if got, want := sectionIDs(html), wantSections; !cmp.Equal(got, want) {
+		t.Errorf("Renderer.Root(...) sections = %v, want %v", got, want)
+	}
+	if got, want := missing(html, wantFragments), []string(nil); !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+		t.Errorf("Renderer.Root(...) missing fragments:\n%s", strings.Join(got, "\n"))
+	}
+}
+
+func TestRenderer_Package_WithSeveralModules_LinksToRoot(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	sut := newRendererFor(t, loadertest.Multi(t))
+	var out strings.Builder
+	wantFragments := fragments{
+		`<a class="sidebar-logo" href="../../../../index.html" title="Modules" aria-label="Modules">`,
+		`<a class="badge badge-module" href="../../../../index.html">modules</a>`,
+		`<span class="sep">/</span><a class="badge badge-module" href="../index.html">module</a>`,
+		`<span class="sep">/</span><a href="index.html">lib</a>`,
+	}
+
+	// Act
+	err := sut.Package(&out, loadertest.MultiPackage(t, loadertest.MultiBetaPath, "lib"))
+	html := out.String()
+
+	// Assert
+	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Renderer.Package(...) = %v, want nil", got)
+	}
+	if got, want := missing(html, wantFragments), []string(nil); !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+		t.Errorf("Renderer.Package(...) missing fragments:\n%s", strings.Join(got, "\n"))
+	}
+}
+
+func TestRenderer_Type_WithTypeFromOtherModule_LinksToItsPage(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	sut := newRendererFor(t, loadertest.Multi(t))
+	var out strings.Builder
+	wantFragments := fragments{
+		`<a href="../../alpha/Unit.html"><span class="nx">alpha</span><span class="p">.</span><span class="nx">Unit</span></a>`,
+	}
+
+	// Act
+	err := sut.Type(&out, loadertest.MultiType(t, loadertest.MultiBetaPath, "lib", "Wrapper"))
+	html := out.String()
+
+	// Assert
+	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Renderer.Type(...) = %v, want nil", got)
+	}
+	if got, want := missing(html, wantFragments), []string(nil); !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+		t.Errorf("Renderer.Type(...) missing fragments:\n%s", strings.Join(got, "\n"))
 	}
 }
 

@@ -29,18 +29,28 @@ func (b *builder) rel(to string) string {
 	return pathmap.Rel(b.from, to)
 }
 
-// newPage returns a page with the chrome that every page shares.
-func (b *builder) newPage(title string) *page {
-	mod := b.r.module
-	return &page{
-		Title:      title,
-		ModulePath: mod.Path,
-		ModuleHref: b.rel(pathmap.Module(mod.Path)),
-		CSS:        b.rel(pathmap.Static(CSSFile)),
-		JS:         b.rel(pathmap.Static(JSFile)),
-		IndexJS:    b.rel(pathmap.Static("search-index.js")),
-		Root:       b.rel(""),
+// newPage returns a page with the chrome that every page shares. mod is the
+// module of the page, or nil for the root page.
+func (b *builder) newPage(title string, mod *model.Module) *page {
+	pg := &page{
+		Title:     title,
+		HomeHref:  b.rel(pathmap.Root()),
+		HomeTitle: rootTitle,
+		CSS:       b.rel(pathmap.Static(CSSFile)),
+		JS:        b.rel(pathmap.Static(JSFile)),
+		IndexJS:   b.rel(pathmap.Static("search-index.js")),
+		Root:      b.rel(""),
 	}
+	if mod != nil && !b.multiModule() {
+		pg.HomeHref = b.rel(pathmap.Module(mod.Path))
+		pg.HomeTitle = mod.Path
+	}
+	return pg
+}
+
+// multiModule reports whether the site has a root page that lists modules.
+func (b *builder) multiModule() bool {
+	return len(b.r.site.Modules) > 1
 }
 
 // printer returns a signature printer for the page. self is the URL the
@@ -135,12 +145,12 @@ func (b *builder) sourceHref(n ast.Node) string {
 	if n == nil {
 		return ""
 	}
-	pos := b.r.module.Fset.Position(n.Pos())
+	pos := b.r.site.Fset.Position(n.Pos())
 	if !pos.IsValid() {
 		return ""
 	}
 	file := path.Base(pos.Filename)
-	return b.rel(pathmap.Source(b.r.module.Path, b.pkg.RelPath, file)) + "#L" + strconv.Itoa(pos.Line)
+	return b.rel(pathmap.Source(b.pkg.Module.Path, b.pkg.RelPath, file)) + "#L" + strconv.Itoa(pos.Line)
 }
 
 // examplesSection returns the Examples section, or nil when there are none.
@@ -176,11 +186,17 @@ func exampleTitle(ex *model.Example) string {
 	return "Example"
 }
 
-// breadcrumb returns the path from the module badge to the package, followed
-// by the given symbol crumbs.
-func (b *builder) breadcrumb(p *model.Package, symbols ...crumb) []crumb {
-	mod := b.r.module
-	crumbs := []crumb{{Text: "module", Href: b.rel(pathmap.Module(mod.Path)), Module: true}}
+// breadcrumb returns the path from the module badge to the package p of mod,
+// followed by the given symbol crumbs. p is nil for a module without a root
+// package. In a site with several modules, the modules badge comes first.
+func (b *builder) breadcrumb(mod *model.Module, p *model.Package, symbols ...crumb) []crumb {
+	var crumbs []crumb
+	module := crumb{Text: "module", Href: b.rel(pathmap.Module(mod.Path)), Badge: true}
+	if b.multiModule() {
+		module.Separator = "/"
+		crumbs = append(crumbs, b.rootCrumb())
+	}
+	crumbs = append(crumbs, module)
 	if p != nil && p.RelPath != "" {
 		elems := strings.Split(p.RelPath, "/")
 		for i, elem := range elems {
@@ -199,6 +215,11 @@ func (b *builder) breadcrumb(p *model.Package, symbols ...crumb) []crumb {
 		crumbs = append(crumbs, c)
 	}
 	return crumbs
+}
+
+// rootCrumb returns the badge that links to the root page of the site.
+func (b *builder) rootCrumb() crumb {
+	return crumb{Text: "modules", Href: b.rel(pathmap.Root()), Badge: true}
 }
 
 // appendSection adds s to the page when it is not nil.

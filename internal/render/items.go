@@ -10,7 +10,7 @@ import (
 
 // typeItem returns the list entry of a type.
 func (b *builder) typeItem(t *model.Type) item {
-	href := b.rel(pathmap.Symbol(b.r.module.Path, t.Pkg.RelPath, t.Name))
+	href := b.rel(pathmap.Symbol(t.Pkg.Module.Path, t.Pkg.RelPath, t.Name))
 	summary, full := b.summaryAndFull(b.doc(t.Doc))
 	return item{
 		ID:         "type." + t.Name,
@@ -27,7 +27,7 @@ func (b *builder) typeItem(t *model.Type) item {
 // funcItem returns the list entry of a function or method. The id prefix
 // distinguishes the section the entry appears in.
 func (b *builder) funcItem(prefix string, f *model.Func) item {
-	href := b.rel(funcPath(b.r.module.Path, f))
+	href := b.rel(funcPath(f))
 	summary, full := b.summaryAndFull(b.doc(f.Doc))
 	return item{
 		ID:         prefix + "." + f.Name,
@@ -43,7 +43,7 @@ func (b *builder) funcItem(prefix string, f *model.Func) item {
 
 // valueItem returns the list entry of a constant or variable.
 func (b *builder) valueItem(prefix string, v *model.Value) item {
-	href := b.rel(pathmap.Symbol(b.r.module.Path, v.Pkg.RelPath, v.Name))
+	href := b.rel(pathmap.Symbol(v.Pkg.Module.Path, v.Pkg.RelPath, v.Name))
 	summary, full := b.summaryAndFull(b.doc(v.Doc))
 	var pos ast.Node
 	if v.Spec != nil {

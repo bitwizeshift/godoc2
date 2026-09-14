@@ -17,7 +17,7 @@ const rootIndex = "example.com/sample/index.html"
 func TestResolver_URL(t *testing.T) {
 	t.Parallel()
 
-	mod := loadertest.Sample(t)
+	site := loadertest.Sample(t)
 	root := loadertest.Package(t, "")
 	circle := loadertest.Type(t, "", "Circle")
 	area := loadertest.Method(t, "", "Circle", "Area")
@@ -100,7 +100,7 @@ func TestResolver_URL(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			sut := link.New(mod)
+			sut := link.New(site)
 
 			// Act
 			url, ok := sut.URL(tc.from, tc.obj)
@@ -123,13 +123,13 @@ func TestResolver_URL_WithThirdPartyObject_PinsVersion(t *testing.T) {
 	depPkg := types.NewPackage("github.com/acme/widgets", "widgets")
 	obj := types.NewTypeName(token.NoPos, depPkg, "Widget", nil)
 	depPkg.Scope().Insert(obj)
-	mod := &model.Module{
-		Path: "example.com/mod",
+	site := &model.Site{
+		Modules: []*model.Module{{Path: "example.com/mod"}},
 		Deps: map[string]model.Dependency{
 			"github.com/acme/widgets": {Path: "github.com/acme/widgets", Version: "v1.2.3"},
 		},
 	}
-	sut := link.New(mod)
+	sut := link.New(site)
 
 	// Act
 	url, ok := sut.URL("example.com/mod/index.html", obj)
@@ -146,7 +146,7 @@ func TestResolver_URL_WithThirdPartyObject_PinsVersion(t *testing.T) {
 func TestResolver_Lookup(t *testing.T) {
 	t.Parallel()
 
-	mod := loadertest.Sample(t)
+	site := loadertest.Sample(t)
 	root := loadertest.Package(t, "")
 
 	testCases := []struct {
@@ -212,7 +212,7 @@ func TestResolver_Lookup(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			sut := link.New(mod)
+			sut := link.New(site)
 
 			// Act
 			url, ok := sut.Lookup(rootIndex, tc.pkg, tc.symbol, tc.method)

@@ -19,7 +19,7 @@ type Impl struct {
 	// satisfies the interface.
 	Pointer bool
 
-	// Local is the documented type when Obj belongs to the module, or nil.
+	// Local is the documented type when Obj belongs to the site, or nil.
 	Local *model.Type
 }
 
@@ -32,7 +32,7 @@ type Group struct {
 	Impls []Impl
 }
 
-// Index answers relation queries for one module.
+// Index answers relation queries for the modules of one site.
 type Index struct {
 	packages   map[string]*model.Package
 	local      map[*types.TypeName]*model.Type
@@ -40,13 +40,14 @@ type Index struct {
 	named      []*types.TypeName
 }
 
-// New builds the index for mod.
-func New(mod *model.Module) *Index {
+// New builds the index for site.
+func New(site *model.Site) *Index {
 	idx := &Index{
 		packages: map[string]*model.Package{},
 		local:    map[*types.TypeName]*model.Type{},
 	}
-	for _, p := range mod.Packages {
+	pkgs := site.Packages()
+	for _, p := range pkgs {
 		idx.packages[p.ImportPath] = p
 		for _, t := range p.Types {
 			if t.Obj != nil {
@@ -55,14 +56,14 @@ func New(mod *model.Module) *Index {
 		}
 	}
 	seen := map[*types.Package]bool{}
-	for _, p := range mod.Packages {
+	for _, p := range pkgs {
 		idx.scan(p.TypesPkg, seen)
 	}
 	return idx
 }
 
 // scan collects the exported candidate types of pkg and of every package it
-// imports, skipping internal packages of other modules.
+// imports, skipping internal packages outside the site.
 func (idx *Index) scan(pkg *types.Package, seen map[*types.Package]bool) {
 	if pkg == nil || seen[pkg] {
 		return
@@ -127,7 +128,7 @@ type FuncGroup struct {
 	Funcs []*model.Func
 }
 
-// Constructors returns the functions of the module whose first result is t
+// Constructors returns the functions of the site whose first result is t
 // or a pointer to t, grouped by package. The group of the package of t comes
 // first with an empty path, and the other groups follow in import path
 // order.
@@ -137,7 +138,7 @@ func (idx *Index) Constructors(t *model.Type) []FuncGroup {
 	})
 }
 
-// Utilities returns the functions of the module that take t or a pointer to
+// Utilities returns the functions of the site that take t or a pointer to
 // t as a parameter and are not constructors, grouped by package in the same
 // order as [Index.Constructors].
 func (idx *Index) Utilities(t *model.Type) []FuncGroup {
@@ -146,7 +147,7 @@ func (idx *Index) Utilities(t *model.Type) []FuncGroup {
 	})
 }
 
-// funcGroups collects the module functions accepted by match, grouped by
+// funcGroups collects the site functions accepted by match, grouped by
 // package with the package of t first.
 func (idx *Index) funcGroups(t *model.Type, match func(*model.Func) bool) []FuncGroup {
 	if t.Obj == nil || t.Pkg == nil {

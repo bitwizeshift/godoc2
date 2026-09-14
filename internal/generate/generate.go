@@ -21,14 +21,14 @@ import (
 // ErrGenerate wraps every error reported by [Generator.Generate].
 var ErrGenerate = errors.New("generate")
 
-// Loader loads the module to document.
+// Loader loads the modules to document.
 type Loader interface {
-	Load(ctx context.Context) (*model.Module, error)
+	Load(ctx context.Context) (*model.Site, error)
 }
 
 // Generator builds the documentation site.
 type Generator struct {
-	// Loader loads the module.
+	// Loader loads the modules.
 	Loader Loader
 
 	// Sink receives the generated files.
@@ -38,7 +38,7 @@ type Generator struct {
 	Reporter progress.Reporter
 }
 
-// Generate loads the module and writes every page. It returns an error
+// Generate loads the modules and writes every page. It returns an error
 // wrapping [ErrGenerate] together with the failing stage and the cause.
 func (g *Generator) Generate(ctx context.Context) error {
 	reporter := g.Reporter
@@ -53,7 +53,6 @@ func (g *Generator) Generate(ctx context.Context) error {
 type run struct {
 	gen      *Generator
 	reporter progress.Reporter
-	module   *model.Module
 	renderer *render.Renderer
 	docfiles *docfile.Resolver
 	search   *search.Index
@@ -61,15 +60,14 @@ type run struct {
 
 func (r *run) execute(ctx context.Context) error {
 	r.reporter.Stage("Loading packages")
-	mod, err := r.gen.Loader.Load(ctx)
+	site, err := r.gen.Loader.Load(ctx)
 	if err != nil {
 		return r.fail("Loading packages", err)
 	}
-	r.module = mod
 
 	r.reporter.Stage("Indexing")
-	r.docfiles = docfile.NewResolver(mod)
-	renderer, err := render.New(mod, link.New(mod), relate.New(mod), r.docfiles)
+	r.docfiles = docfile.NewResolver(site)
+	renderer, err := render.New(site, link.New(site), relate.New(site), r.docfiles)
 	if err != nil {
 		return r.fail("Indexing", err)
 	}
@@ -80,16 +78,14 @@ func (r *run) execute(ctx context.Context) error {
 		return r.fail("Writing static files", err)
 	}
 
-	r.reporter.Stage("Writing module page")
-	if err := r.modulePage(); err != nil {
-		return r.fail("Writing module page", err)
+	r.reporter.Stage("Writing root page")
+	if err := r.write(pathmap.Root(), r.renderer.Root); err != nil {
+		return r.fail("Writing root page", err)
 	}
 
-	for _, p := range mod.Packages {
-		stage := "Writing package " + p.ImportPath
-		r.reporter.Stage(stage)
-		if err := r.packagePages(p); err != nil {
-			return r.fail(stage, err)
+	for _, mod := range site.Modules {
+		if err := r.modulePages(mod); err != nil {
+			return err
 		}
 	}
 
@@ -152,27 +148,31 @@ func (r *run) assets() error {
 	return nil
 }
 
-// modulePage writes the module page, which is also the page of the root
-// package when the module has one.
-func (r *run) modulePage() error {
-	root := r.rootPackage()
-	if root != nil {
+// modulePages writes the module page of mod and then the pages of each of
+// its packages, one stage per package. The module page is also the page of
+// the root package when the module has one.
+func (r *run) modulePages(mod *model.Module) error {
+	stage := "Writing module " + mod.Path
+	r.reporter.Stage(stage)
+	if root := mod.Root(); root != nil {
 		r.search.Add(search.Entry{
 			Name:    root.ImportPath,
 			Kind:    "package",
 			Package: root.ImportPath,
-			Path:    pathmap.Module(r.module.Path),
+			Path:    pathmap.Module(mod.Path),
 		})
 	}
-	return r.write(pathmap.Module(r.module.Path), func(w io.Writer) error {
-		return r.renderer.Module(w, root)
+	err := r.write(pathmap.Module(mod.Path), func(w io.Writer) error {
+		return r.renderer.Module(w, mod)
 	})
-}
-
-func (r *run) rootPackage() *model.Package {
-	for _, p := range r.module.Packages {
-		if p.RelPath == "" {
-			return p
+	if err != nil {
+		return r.fail(stage, err)
+	}
+	for _, p := range mod.Packages {
+		stage := "Writing package " + p.ImportPath
+		r.reporter.Stage(stage)
+		if err := r.packagePages(p); err != nil {
+			return r.fail(stage, err)
 		}
 	}
 	return nil
@@ -186,9 +186,9 @@ func (r *run) packagePages(p *model.Package) error {
 			Name:    p.ImportPath,
 			Kind:    "package",
 			Package: p.ImportPath,
-			Path:    pathmap.Package(r.module.Path, p.RelPath),
+			Path:    pathmap.Package(p.Module.Path, p.RelPath),
 		})
-		if err := r.write(pathmap.Package(r.module.Path, p.RelPath), func(w io.Writer) error {
+		if err := r.write(pathmap.Package(p.Module.Path, p.RelPath), func(w io.Writer) error {
 			return r.renderer.Package(w, p)
 		}); err != nil {
 			return err
@@ -218,7 +218,7 @@ func (r *run) packagePages(p *model.Package) error {
 }
 
 func (r *run) typePages(t *model.Type) error {
-	path := pathmap.Symbol(r.module.Path, t.Pkg.RelPath, t.Name)
+	path := pathmap.Symbol(t.Pkg.Module.Path, t.Pkg.RelPath, t.Name)
 	r.search.Add(search.Entry{Name: t.Name, Kind: "type", Package: t.Pkg.ImportPath, Path: path})
 	if err := r.write(path, func(w io.Writer) error {
 		return r.renderer.Type(w, t)
@@ -238,9 +238,9 @@ func (r *run) funcPage(f *model.Func) error {
 	if f.Recv != nil {
 		entry.Name = f.Recv.Name + "." + f.Name
 		entry.Kind = "method"
-		entry.Path = pathmap.Method(r.module.Path, f.Pkg.RelPath, f.Recv.Name, f.Name)
+		entry.Path = pathmap.Method(f.Pkg.Module.Path, f.Pkg.RelPath, f.Recv.Name, f.Name)
 	} else {
-		entry.Path = pathmap.Symbol(r.module.Path, f.Pkg.RelPath, f.Name)
+		entry.Path = pathmap.Symbol(f.Pkg.Module.Path, f.Pkg.RelPath, f.Name)
 	}
 	r.search.Add(entry)
 	return r.write(entry.Path, func(w io.Writer) error {
@@ -249,7 +249,7 @@ func (r *run) funcPage(f *model.Func) error {
 }
 
 func (r *run) valuePage(v *model.Value) error {
-	path := pathmap.Symbol(r.module.Path, v.Pkg.RelPath, v.Name)
+	path := pathmap.Symbol(v.Pkg.Module.Path, v.Pkg.RelPath, v.Name)
 	r.search.Add(search.Entry{Name: v.Name, Kind: v.Kind.String(), Package: v.Pkg.ImportPath, Path: path})
 	return r.write(path, func(w io.Writer) error {
 		return r.renderer.Value(w, v)
@@ -261,7 +261,7 @@ func (r *run) sourcePage(p *model.Package, f *model.File) error {
 	if err != nil {
 		return err
 	}
-	return r.write(pathmap.Source(r.module.Path, p.RelPath, f.Name), func(w io.Writer) error {
+	return r.write(pathmap.Source(p.Module.Path, p.RelPath, f.Name), func(w io.Writer) error {
 		return r.renderer.Source(w, p, f, src)
 	})
 }

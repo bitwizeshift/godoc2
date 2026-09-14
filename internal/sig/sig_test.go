@@ -19,9 +19,9 @@ const (
 
 func newPrinter(t testing.TB) *sig.Printer {
 	t.Helper()
-	mod := loadertest.Sample(t)
+	site := loadertest.Sample(t)
 	return &sig.Printer{
-		Resolver: link.New(mod),
+		Resolver: link.New(site),
 		Pkg:      loadertest.Package(t, ""),
 		From:     rootIndex,
 	}

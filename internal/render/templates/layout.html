@@ -10,7 +10,7 @@
 <body>
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-inner">
-    <a class="sidebar-logo" href="{{.ModuleHref}}" title="{{.ModulePath}}" aria-label="Module index">
+    <a class="sidebar-logo" href="{{.HomeHref}}" title="{{.HomeTitle}}" aria-label="{{.HomeTitle}}">
       <svg viewBox="0 0 207 78" width="80" height="30" role="img" aria-hidden="true">
         <g fill="#00acd7" fill-rule="evenodd">
           <path d="m16.2 24.1c-.4 0-.5-.2-.3-.5l2.1-2.7c.2-.3.7-.5 1.1-.5h35.7c.4 0 .5.3.3.6l-1.7 2.6c-.2.3-.7.6-1 .6z"/>
@@ -43,7 +43,7 @@
     <nav class="breadcrumb" aria-label="Breadcrumb">
       {{- range .Breadcrumb}}
       {{- if .Separator}}<span class="sep">{{.Separator}}</span>{{end}}
-      {{- if .Module}}<a class="badge badge-module" href="{{.Href}}">module</a>
+      {{- if .Badge}}<a class="badge badge-module" href="{{.Href}}">{{.Text}}</a>
       {{- else if .Href}}<a href="{{.Href}}">{{.Text}}</a>
       {{- else}}<span class="crumb">{{.Text}}</span>{{end}}
       {{- end}}
@@ -79,7 +79,7 @@
   <section id="search-results" hidden></section>
   <section id="content">
     <div class="main-heading">
-      <h1><span class="kind">{{.Heading.Kind}}</span> {{.Heading.Name}}{{template "marks" .Heading}}</h1>
+      <h1>{{if .Heading.Kind}}<span class="kind">{{.Heading.Kind}}</span> {{end}}{{.Heading.Name}}{{template "marks" .Heading}}</h1>
       {{- if .SourceHref}}<a class="src" href="{{.SourceHref}}">source</a>{{end}}
     </div>
     {{- if .Definition}}

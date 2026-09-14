@@ -126,6 +126,96 @@ func TestResolver_Resolve(t *testing.T) {
 	}
 }
 
+func TestResolver_Resolve_WithSiteDocFile(t *testing.T) {
+	t.Parallel()
+
+	const from = "index.html"
+
+	testCases := []struct {
+		name string
+		dest string
+		want string
+	}{
+		{
+			name: "module with root package",
+			dest: "alpha",
+			want: "example.com/multi/alpha/index.html",
+		},
+		{
+			name: "module without root package",
+			dest: "beta",
+			want: "example.com/multi/beta/index.html",
+		},
+		{
+			name: "own directory is the root module",
+			dest: ".",
+			want: "example.com/multi/index.html",
+		},
+		{
+			name: "package of a nested module",
+			dest: "beta/lib",
+			want: "example.com/multi/beta/lib/index.html",
+		},
+		{
+			name: "Go file of a nested module",
+			dest: "beta/lib/lib.go#L7",
+			want: "example.com/multi/beta/lib/lib.go.html#L7",
+		},
+		{
+			name: "file of the root module",
+			dest: "docs/notes.md",
+			want: "example.com/multi/docs/notes.md",
+		},
+		{
+			name: "file outside the site",
+			dest: "../sample/go.mod",
+			want: "../sample/go.mod",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			site := loadertest.Multi(t)
+			sut := docfile.NewResolver(site)
+
+			// Act
+			href := sut.Resolve(site.DocFile, from, tc.dest)
+
+			// Assert
+			if got, want := href, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("Resolver.Resolve(...) = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestResolver_Resolve_WithFileOutsideEveryModule_CopiesBelowRoot(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	site := &model.Site{Dir: loadertest.MultiDir(), Modules: loadertest.Multi(t).Modules[1:]}
+	sut := docfile.NewResolver(site)
+	f := loadertest.Multi(t).DocFile
+	want := []docfile.Asset{
+		{Source: filepath.Join(site.Dir, "docs", "notes.md"), Output: "docs/notes.md"},
+	}
+
+	// Act
+	href := sut.Resolve(f, "index.html", "docs/notes.md")
+	assets := sut.Assets()
+
+	// Assert
+	if got, want := href, "docs/notes.md"; !cmp.Equal(got, want) {
+		t.Errorf("Resolver.Resolve(...) = %q, want %q", got, want)
+	}
+	if got, want := assets, want; !cmp.Equal(got, want) {
+		t.Errorf("Resolver.Assets() mismatch (-want +got):\n%s", cmp.Diff(want, got))
+	}
+}
+
 func TestResolver_Assets(t *testing.T) {
 	t.Parallel()
 

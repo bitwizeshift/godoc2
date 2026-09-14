@@ -30,9 +30,9 @@ const (
 	JSFile  = "godoc2.js"
 )
 
-// Renderer writes the pages of one module.
+// Renderer writes the pages of one site.
 type Renderer struct {
-	module    *model.Module
+	site      *model.Site
 	resolver  *link.Resolver
 	index     *relate.Index
 	docfiles  *docfile.Resolver
@@ -41,16 +41,16 @@ type Renderer struct {
 	tmpl      *template.Template
 }
 
-// New returns a [Renderer] for mod. docfiles resolves the links of Markdown
+// New returns a [Renderer] for site. docfiles resolves the links of Markdown
 // documentation files. It returns an error if the embedded templates do not
 // parse.
-func New(mod *model.Module, resolver *link.Resolver, index *relate.Index, docfiles *docfile.Resolver) (*Renderer, error) {
+func New(site *model.Site, resolver *link.Resolver, index *relate.Index, docfiles *docfile.Resolver) (*Renderer, error) {
 	tmpl, err := template.ParseFS(templateFS, "templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("render: %w", err)
 	}
 	return &Renderer{
-		module:    mod,
+		site:      site,
 		resolver:  resolver,
 		index:     index,
 		docfiles:  docfiles,
@@ -74,40 +74,51 @@ func (r *Renderer) JS(w io.Writer) error {
 	return err
 }
 
-// Module writes the module page. root is the root package of the module, or
-// nil when the module root holds no package.
-func (r *Renderer) Module(w io.Writer, root *model.Package) error {
-	b := r.builder(pathmap.Module(r.module.Path), root)
-	return r.execute(w, b.modulePage(root))
+// Root writes the root page of the site. For a site with one module it is a
+// redirect to the module page. For several modules it lists them.
+func (r *Renderer) Root(w io.Writer) error {
+	if len(r.site.Modules) == 1 {
+		return r.redirect(w, r.site.Modules[0])
+	}
+	b := r.builder(pathmap.Root(), nil)
+	return r.execute(w, b.rootPage())
+}
+
+// Module writes the page of mod, which is also the page of its root package
+// when the module has one.
+func (r *Renderer) Module(w io.Writer, mod *model.Module) error {
+	root := mod.Root()
+	b := r.builder(pathmap.Module(mod.Path), root)
+	return r.execute(w, b.modulePage(mod, root))
 }
 
 // Package writes the page of p.
 func (r *Renderer) Package(w io.Writer, p *model.Package) error {
-	b := r.builder(pathmap.Package(r.module.Path, p.RelPath), p)
+	b := r.builder(pathmap.Package(p.Module.Path, p.RelPath), p)
 	return r.execute(w, b.packagePage(p))
 }
 
 // Type writes the page of t.
 func (r *Renderer) Type(w io.Writer, t *model.Type) error {
-	b := r.builder(pathmap.Symbol(r.module.Path, t.Pkg.RelPath, t.Name), t.Pkg)
+	b := r.builder(pathmap.Symbol(t.Pkg.Module.Path, t.Pkg.RelPath, t.Name), t.Pkg)
 	return r.execute(w, b.typePage(t))
 }
 
 // Func writes the page of a function or method.
 func (r *Renderer) Func(w io.Writer, f *model.Func) error {
-	b := r.builder(funcPath(r.module.Path, f), f.Pkg)
+	b := r.builder(funcPath(f), f.Pkg)
 	return r.execute(w, b.funcPage(f))
 }
 
 // Value writes the page of a constant or variable.
 func (r *Renderer) Value(w io.Writer, v *model.Value) error {
-	b := r.builder(pathmap.Symbol(r.module.Path, v.Pkg.RelPath, v.Name), v.Pkg)
+	b := r.builder(pathmap.Symbol(v.Pkg.Module.Path, v.Pkg.RelPath, v.Name), v.Pkg)
 	return r.execute(w, b.valuePage(v))
 }
 
 // Source writes the highlighted page of a source file of p.
 func (r *Renderer) Source(w io.Writer, p *model.Package, file *model.File, src []byte) error {
-	b := r.builder(pathmap.Source(r.module.Path, p.RelPath, file.Name), p)
+	b := r.builder(pathmap.Source(p.Module.Path, p.RelPath, file.Name), p)
 	pg, err := b.sourcePage(p, file, src)
 	if err != nil {
 		return err
@@ -122,10 +133,22 @@ func (r *Renderer) execute(w io.Writer, pg *page) error {
 	return nil
 }
 
-// funcPath returns the output path of a function or method page.
-func funcPath(modulePath string, f *model.Func) string {
-	if f.Recv != nil {
-		return pathmap.Method(modulePath, f.Pkg.RelPath, f.Recv.Name, f.Name)
+// redirect writes a page that sends the browser to the page of mod.
+func (r *Renderer) redirect(w io.Writer, mod *model.Module) error {
+	pg := redirect{
+		Title: mod.Path,
+		Href:  pathmap.Rel(pathmap.Root(), pathmap.Module(mod.Path)),
 	}
-	return pathmap.Symbol(modulePath, f.Pkg.RelPath, f.Name)
+	if err := r.tmpl.ExecuteTemplate(w, "redirect.html", pg); err != nil {
+		return fmt.Errorf("render: %w", err)
+	}
+	return nil
+}
+
+// funcPath returns the output path of a function or method page.
+func funcPath(f *model.Func) string {
+	if f.Recv != nil {
+		return pathmap.Method(f.Pkg.Module.Path, f.Pkg.RelPath, f.Recv.Name, f.Name)
+	}
+	return pathmap.Symbol(f.Pkg.Module.Path, f.Pkg.RelPath, f.Name)
 }

@@ -8,12 +8,51 @@ import (
 	"strings"
 )
 
+// Site is the set of modules that one documentation site covers.
+type Site struct {
+	// Dir is the directory the package patterns were resolved from.
+	Dir string
+
+	// Modules are the loaded modules, sorted by path.
+	Modules []*Module
+
+	// DocFile is the Markdown file that documents the site root. It is set
+	// only when the site holds more than one module.
+	DocFile *DocFile
+
+	// Fset is the file set shared by every package syntax tree.
+	Fset *token.FileSet
+
+	// Deps maps the import path of every loaded dependency package to the
+	// module that provides it.
+	Deps map[string]Dependency
+}
+
+// Module returns the module with the given path, or nil.
+func (s *Site) Module(path string) *Module {
+	for _, m := range s.Modules {
+		if m.Path == path {
+			return m
+		}
+	}
+	return nil
+}
+
+// Packages returns the packages of every module in site order.
+func (s *Site) Packages() []*Package {
+	var pkgs []*Package
+	for _, m := range s.Modules {
+		pkgs = append(pkgs, m.Packages...)
+	}
+	return pkgs
+}
+
 // Module is a loaded Go module together with its documented packages.
 type Module struct {
 	// Path is the module path from go.mod.
 	Path string
 
-	// Version is the module version, or empty for the main module.
+	// Version is the module version, or empty for a main module.
 	Version string
 
 	// Dir is the root directory of the module on disk.
@@ -22,16 +61,34 @@ type Module struct {
 	// Packages are the packages of the module, sorted by import path.
 	Packages []*Package
 
-	// Fset is the file set shared by every package syntax tree.
-	Fset *token.FileSet
-
-	// Deps maps the import path of every loaded dependency package to the
-	// module that provides it.
-	Deps map[string]Dependency
-
 	// DocFile is the Markdown file that documents the module root. It is set
 	// only when no package lives in the root directory.
 	DocFile *DocFile
+}
+
+// Root returns the package in the module root directory, or nil.
+func (m *Module) Root() *Package {
+	for _, p := range m.Packages {
+		if p.RelPath == "" {
+			return p
+		}
+	}
+	return nil
+}
+
+// Doc returns the raw documentation of the module: the doc comment of its
+// root package, or an empty string when the module has no root package.
+func (m *Module) Doc() string {
+	if root := m.Root(); root != nil {
+		return root.Doc
+	}
+	return ""
+}
+
+// Deprecated returns the deprecation message of the root package, or an
+// empty string when the module has no deprecated root package.
+func (m *Module) Deprecated() string {
+	return Deprecation(m.Doc())
 }
 
 // DocFile is a Markdown file that documents a directory in place of a
@@ -67,6 +124,9 @@ type Package struct {
 
 	// Dir is the package directory on disk.
 	Dir string
+
+	// Module is the module that owns the package.
+	Module *Module
 
 	// Doc is the raw package documentation.
 	Doc string

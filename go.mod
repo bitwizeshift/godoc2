@@ -7,6 +7,7 @@ require (
 	github.com/bitwizeshift/go-cli v0.5.2
 	github.com/google/go-cmp v0.7.0
 	github.com/yuin/goldmark/v2 v2.1.0
+	golang.org/x/mod v0.41.0
 	golang.org/x/tools v0.50.0
 )
 
@@ -16,7 +17,6 @@ require (
 	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.6 // indirect
-	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/term v0.44.0 // indirect

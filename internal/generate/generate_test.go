@@ -17,13 +17,13 @@ import (
 	"github.com/bitwizeshift/godoc2/internal/progress"
 )
 
-// moduleLoader is a [generate.Loader] that returns a fixed module.
-type moduleLoader struct {
-	module *model.Module
+// siteLoader is a [generate.Loader] that returns a fixed site.
+type siteLoader struct {
+	site *model.Site
 }
 
-func (l moduleLoader) Load(context.Context) (*model.Module, error) {
-	return l.module, nil
+func (l siteLoader) Load(context.Context) (*model.Site, error) {
+	return l.site, nil
 }
 
 // errLoader is a [generate.Loader] that always fails.
@@ -31,7 +31,7 @@ type errLoader struct {
 	err error
 }
 
-func (l errLoader) Load(context.Context) (*model.Module, error) {
+func (l errLoader) Load(context.Context) (*model.Site, error) {
 	return nil, l.err
 }
 
@@ -54,7 +54,7 @@ func TestGenerator_Generate_WithFixture_WritesEveryPage(t *testing.T) {
 	sink := emittest.NewMemSink()
 	reporter := &stageRecorder{}
 	sut := &generate.Generator{
-		Loader:   moduleLoader{module: loadertest.Sample(t)},
+		Loader:   siteLoader{site: loadertest.Sample(t)},
 		Sink:     sink,
 		Reporter: reporter,
 	}
@@ -112,6 +112,7 @@ func TestGenerator_Generate_WithFixture_WritesEveryPage(t *testing.T) {
 		"example.com/sample/shapes/factory.go.html",
 		"example.com/sample/shapes/index.html",
 		"example.com/sample/shapes/shapes.go.html",
+		"index.html",
 		"static/godoc2.css",
 		"static/godoc2.js",
 		"static/search-index.js",
@@ -120,7 +121,8 @@ func TestGenerator_Generate_WithFixture_WritesEveryPage(t *testing.T) {
 		"Loading packages",
 		"Indexing",
 		"Writing static files",
-		"Writing module page",
+		"Writing root page",
+		"Writing module example.com/sample",
 		"Writing package example.com/sample",
 		"Writing package example.com/sample/cmd/tool",
 		"Writing package example.com/sample/empty",
@@ -158,6 +160,99 @@ func TestGenerator_Generate_WithFixture_WritesEveryPage(t *testing.T) {
 	}
 }
 
+func TestGenerator_Generate_WithSeveralModules_WritesRootPage(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	ctx := context.Background()
+	sink := emittest.NewMemSink()
+	reporter := &stageRecorder{}
+	sut := &generate.Generator{
+		Loader:   siteLoader{site: loadertest.Multi(t)},
+		Sink:     sink,
+		Reporter: reporter,
+	}
+	wantPaths := []string{
+		"example.com/multi/Name.html",
+		"example.com/multi/alpha/Unit.Name.html",
+		"example.com/multi/alpha/Unit.html",
+		"example.com/multi/alpha/alpha.go.html",
+		"example.com/multi/alpha/index.html",
+		"example.com/multi/beta/index.html",
+		"example.com/multi/beta/lib/New.html",
+		"example.com/multi/beta/lib/Wrapper.html",
+		"example.com/multi/beta/lib/index.html",
+		"example.com/multi/beta/lib/lib.go.html",
+		"example.com/multi/docs/notes.md",
+		"example.com/multi/index.html",
+		"example.com/multi/multi.go.html",
+		"index.html",
+		"static/godoc2.css",
+		"static/godoc2.js",
+		"static/search-index.js",
+	}
+	wantStages := []string{
+		"Loading packages",
+		"Indexing",
+		"Writing static files",
+		"Writing root page",
+		"Writing module example.com/multi",
+		"Writing package example.com/multi",
+		"Writing module example.com/multi/alpha",
+		"Writing package example.com/multi/alpha",
+		"Writing module example.com/multi/beta",
+		"Writing package example.com/multi/beta/lib",
+		"Copying linked files",
+		"Writing search index",
+	}
+
+	// Act
+	err := sut.Generate(ctx)
+	root, _ := sink.Content("index.html")
+	notes, _ := sink.Content("example.com/multi/docs/notes.md")
+
+	// Assert
+	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Generator.Generate(...) = %v, want nil", got)
+	}
+	if got, want := sink.Paths(), wantPaths; !cmp.Equal(got, want) {
+		t.Errorf("Generator.Generate(...) paths mismatch (-want +got):\n%s", cmp.Diff(want, got))
+	}
+	if got, want := reporter.stages, wantStages; !cmp.Equal(got, want) {
+		t.Errorf("Generator.Generate(...) stages mismatch (-want +got):\n%s", cmp.Diff(want, got))
+	}
+	if got, want := strings.Contains(root, `<h1>Modules</h1>`), true; !cmp.Equal(got, want) {
+		t.Errorf("Generator.Generate(...) root page lists modules = %v, want %v", got, want)
+	}
+	if got, want := notes, "# Notes\n\nThe notes are copied next to the root page.\n"; !cmp.Equal(got, want) {
+		t.Errorf("Generator.Generate(...) copied file mismatch (-want +got):\n%s", cmp.Diff(want, got))
+	}
+}
+
+func TestGenerator_Generate_WithOneModule_RedirectsRootPage(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	ctx := context.Background()
+	sink := emittest.NewMemSink()
+	sut := &generate.Generator{
+		Loader: siteLoader{site: loadertest.Sample(t)},
+		Sink:   sink,
+	}
+
+	// Act
+	err := sut.Generate(ctx)
+	root, _ := sink.Content("index.html")
+
+	// Assert
+	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Generator.Generate(...) = %v, want nil", got)
+	}
+	if got, want := strings.Contains(root, `<meta http-equiv="refresh" content="0; url=example.com/sample/index.html">`), true; !cmp.Equal(got, want) {
+		t.Errorf("Generator.Generate(...) root page redirects = %v, want %v", got, want)
+	}
+}
+
 func TestGenerator_Generate(t *testing.T) {
 	t.Parallel()
 
@@ -177,7 +272,7 @@ func TestGenerator_Generate(t *testing.T) {
 		},
 		{
 			name:    "sink fails",
-			loader:  moduleLoader{module: loadertest.Sample(t)},
+			loader:  siteLoader{site: loadertest.Sample(t)},
 			sink:    emittest.ErrSink(testErr),
 			wantErr: testErr,
 		},
