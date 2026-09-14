@@ -9,14 +9,17 @@ import (
 	"github.com/yuin/goldmark/v2/extension"
 	"github.com/yuin/goldmark/v2/parser"
 	"github.com/yuin/goldmark/v2/renderer/html"
+	"github.com/yuin/goldmark/v2/text"
 
 	"github.com/bitwizeshift/godoc2/internal/markdown/doclink"
 )
 
-// Renderer parses and renders doc comments.
+// Renderer parses and renders doc comments and Markdown files.
 type Renderer struct {
-	parser parser.Parser
-	html   html.Renderer
+	parser   parser.Parser
+	markdown parser.Parser
+	html     html.Renderer
+	unsafe   html.Renderer
 }
 
 // New returns a [Renderer] configured for Go doc comments.
@@ -26,8 +29,16 @@ func New() *Renderer {
 			parser.WithAutoHeadingID(),
 			parser.WithExtensions(extension.GFMParser, doclink.Parser),
 		),
+		markdown: parser.New(
+			parser.WithAutoHeadingID(),
+			parser.WithExtensions(extension.GFMParser),
+		),
 		html: html.New(
 			html.WithExtensions(extension.GFMHTMLRenderer, doclink.HTMLRenderer),
+		),
+		unsafe: html.New(
+			html.WithExtensions(extension.GFMHTMLRenderer),
+			html.WithUnsafe(),
 		),
 	}
 }
@@ -36,7 +47,15 @@ func New() *Renderer {
 func (r *Renderer) Parse(doc string, scope doclink.Scope) *Document {
 	source := []byte(doc)
 	root := r.parser.Parse(source, parser.WithContext(doclink.NewContext(scope)))
-	return &Document{renderer: r, source: source, root: root}
+	return &Document{html: r.html, source: source, root: root}
+}
+
+// ParseMarkdown parses a Markdown file as GitHub Flavored Markdown. Doc
+// links such as [Name] are not resolved, and raw HTML is kept as written.
+func (r *Renderer) ParseMarkdown(text string) *Document {
+	source := []byte(text)
+	root := r.markdown.Parse(source)
+	return &Document{html: r.unsafe, source: source, root: root}
 }
 
 // Heading is a heading of a rendered document.
@@ -48,9 +67,9 @@ type Heading struct {
 
 // Document is a parsed doc comment.
 type Document struct {
-	renderer *Renderer
-	source   []byte
-	root     ast.Node
+	html   html.Renderer
+	source []byte
+	root   ast.Node
 }
 
 // HTML renders the whole document. It returns any error from the renderer.
@@ -86,9 +105,35 @@ func (d *Document) Headings() []Heading {
 	return result
 }
 
+// RewriteLinks replaces the destination of every link and image with the
+// result of fn applied to the written destination.
+func (d *Document) RewriteLinks(fn func(dest string) string) {
+	_ = ast.Walk(d.root, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		switch n := n.(type) {
+		case *ast.Link:
+			n.Destination = d.rewrite(n.Destination, fn)
+		case *ast.Image:
+			n.Destination = d.rewrite(n.Destination, fn)
+		}
+		return ast.WalkContinue, nil
+	})
+}
+
+func (d *Document) rewrite(dest text.SingleLineValue, fn func(string) string) text.SingleLineValue {
+	written := dest.Value(d.source)
+	result := fn(written)
+	if result == written {
+		return dest
+	}
+	return text.NewSingleLineValueFromString(result, nil)
+}
+
 func (d *Document) render(n ast.Node) (template.HTML, error) {
 	var buf bytes.Buffer
-	if err := d.renderer.html.Render(&buf, d.source, n); err != nil {
+	if err := d.html.Render(&buf, d.source, n); err != nil {
 		return "", err
 	}
 	return template.HTML(buf.String()), nil

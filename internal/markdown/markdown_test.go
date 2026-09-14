@@ -80,6 +80,86 @@ func TestDocument_HTML(t *testing.T) {
 	}
 }
 
+func TestRenderer_ParseMarkdown(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		text string
+		want template.HTML
+	}{
+		{
+			name: "doc link stays literal",
+			text: "See [Circle].",
+			want: "<p>See [Circle].</p>\n",
+		},
+		{
+			name: "raw html is kept",
+			text: "<p align=\"center\">Centred</p>\n\nUse <b>bold</b>.",
+			want: "<p align=\"center\">Centred</p>\n<p>Use <b>bold</b>.</p>\n",
+		},
+		{
+			name: "heading gets an id",
+			text: "# Usage Notes\n\nText.",
+			want: `<h1 id="usage-notes">Usage Notes</h1>` + "\n<p>Text.</p>\n",
+		},
+		{
+			name: "gfm autolink",
+			text: "Visit https://example.com now.",
+			want: `<p>Visit <a href="https://example.com">https://example.com</a> now.</p>` + "\n",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			sut := markdown.New().ParseMarkdown(tc.text)
+
+			// Act
+			out, err := sut.HTML()
+
+			// Assert
+			if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+				t.Fatalf("Document.HTML() = %v, want nil", got)
+			}
+			if got, want := out, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("Document.HTML() mismatch (-want +got):\n%s", cmp.Diff(want, got))
+			}
+		})
+	}
+}
+
+func TestDocument_RewriteLinks(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	sut := markdown.New().ParseMarkdown("[a](docs/a.md) and ![b](img/b.png \"B\") and [c](https://example.com).")
+	sut.RewriteLinks(func(dest string) string {
+		switch dest {
+		case "docs/a.md":
+			return "../docs/a.md"
+		case "img/b.png":
+			return "../img/b.png"
+		default:
+			return dest
+		}
+	})
+	want := template.HTML(`<p><a href="../docs/a.md">a</a> and <img src="../img/b.png" alt="b" title="B"> and <a href="https://example.com">c</a>.</p>` + "\n")
+
+	// Act
+	out, err := sut.HTML()
+
+	// Assert
+	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Document.HTML() = %v, want nil", got)
+	}
+	if got, want := out, want; !cmp.Equal(got, want) {
+		t.Errorf("Document.HTML() mismatch (-want +got):\n%s", cmp.Diff(want, got))
+	}
+}
+
 func TestDocument_Summary(t *testing.T) {
 	t.Parallel()
 
