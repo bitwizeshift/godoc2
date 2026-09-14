@@ -11,7 +11,7 @@ import (
 // typeItem returns the list entry of a type.
 func (b *builder) typeItem(t *model.Type) item {
 	href := b.rel(pathmap.Symbol(b.r.module.Path, t.Pkg.RelPath, t.Name))
-	summary, full := b.summaryAndFull(t.Doc)
+	summary, full := b.summaryAndFull(b.doc(t.Doc))
 	return item{
 		ID:         "type." + t.Name,
 		Name:       t.Name,
@@ -27,7 +27,7 @@ func (b *builder) typeItem(t *model.Type) item {
 // distinguishes the section the entry appears in.
 func (b *builder) funcItem(prefix string, f *model.Func) item {
 	href := b.rel(funcPath(b.r.module.Path, f))
-	summary, full := b.summaryAndFull(f.Doc)
+	summary, full := b.summaryAndFull(b.doc(f.Doc))
 	return item{
 		ID:         prefix + "." + f.Name,
 		Name:       f.Name,
@@ -42,7 +42,7 @@ func (b *builder) funcItem(prefix string, f *model.Func) item {
 // valueItem returns the list entry of a constant or variable.
 func (b *builder) valueItem(prefix string, v *model.Value) item {
 	href := b.rel(pathmap.Symbol(b.r.module.Path, v.Pkg.RelPath, v.Name))
-	summary, full := b.summaryAndFull(v.Doc)
+	summary, full := b.summaryAndFull(b.doc(v.Doc))
 	var pos ast.Node
 	if v.Spec != nil {
 		pos = v.Spec
@@ -143,7 +143,7 @@ func (b *builder) implItem(prefix string, impl relate.Impl, receiver string) ite
 	local := b.withPackage(impl.Local.Pkg)
 	it.Code = local.code(local.printer(href).Type(impl.Local))
 	it.SourceHref = local.sourceHref(impl.Local.Spec)
-	it.Summary, it.Full = local.summaryAndFull(impl.Local.Doc)
+	it.Summary, it.Full = local.summaryAndFull(local.doc(impl.Local.Doc))
 	it.Internal = impl.Local.Pkg.Internal()
 	return it
 }

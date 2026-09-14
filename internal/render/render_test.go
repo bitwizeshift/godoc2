@@ -10,6 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
+	"github.com/bitwizeshift/godoc2/internal/docfile"
 	"github.com/bitwizeshift/godoc2/internal/link"
 	"github.com/bitwizeshift/godoc2/internal/loader/loadertest"
 	"github.com/bitwizeshift/godoc2/internal/model"
@@ -19,8 +20,12 @@ import (
 
 func newRenderer(t testing.TB) *render.Renderer {
 	t.Helper()
-	mod := loadertest.Sample(t)
-	r, err := render.New(mod, link.New(mod), relate.New(mod))
+	return newRendererFor(t, loadertest.Sample(t))
+}
+
+func newRendererFor(t testing.TB, mod *model.Module) *render.Renderer {
+	t.Helper()
+	r, err := render.New(mod, link.New(mod), relate.New(mod), docfile.NewResolver(mod))
 	if err != nil {
 		t.Fatalf("render.New(...) = %v, want nil", err)
 	}
@@ -65,6 +70,9 @@ func TestRenderer_Module(t *testing.T) {
 		`<td><a href="cmd/tool/index.html">tool</a></td>`,
 		`<td><a href="internal/secret/index.html">internal/secret</a> <span class="badge badge-internal">internal</span></td>`,
 		`<td><a href="shapes/index.html">shapes</a></td>`,
+		`<td><a href="readme/index.html">readme</a></td>`,
+		`<td class="summary"><p>Package readme is documented by its README file.</p>`,
+		`<td class="summary"><p>Package indexed is documented by index.md.</p>`,
 		`<summary><span class="dir">internal</span></summary>`,
 		`<h1 id="usage">Usage</h1>`,
 		`<li><a href="#usage">Usage</a></li>`,
@@ -78,6 +86,37 @@ func TestRenderer_Module(t *testing.T) {
 
 	// Act
 	err := sut.Module(&out, root)
+	html := out.String()
+
+	// Assert
+	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Renderer.Module(...) = %v, want nil", got)
+	}
+	if got, want := sectionIDs(html), wantSections; !cmp.Equal(got, want) {
+		t.Errorf("Renderer.Module(...) sections = %v, want %v", got, want)
+	}
+	if got, want := missing(html, wantFragments), []string(nil); !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+		t.Errorf("Renderer.Module(...) missing fragments:\n%s", strings.Join(got, "\n"))
+	}
+}
+
+func TestRenderer_Module_WithoutRootPackage_UsesModuleDocFile(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	sut := newRendererFor(t, loadertest.Bare(t))
+	var out strings.Builder
+	wantSections := []string{"documentation", "packages"}
+	wantFragments := fragments{
+		`<h1><span class="kind">module</span> example.com/bare</h1>`,
+		`<h1 id="bare">Bare</h1>`,
+		`<a href="lib/index.html">lib</a>`,
+		`<a href="lib/lib.go.html">its source</a>`,
+		`<td><a href="lib/index.html">lib</a></td>`,
+	}
+
+	// Act
+	err := sut.Module(&out, nil)
 	html := out.String()
 
 	// Assert
@@ -127,6 +166,44 @@ func TestRenderer_Package(t *testing.T) {
 			wantFragments: fragments{
 				`<h1><span class="kind">binary</span> tool</h1>`,
 				`<span class="crumb">cmd</span><span class="sep">/</span><a href="index.html">tool</a>`,
+			},
+		},
+		{
+			name:         "package documented by README",
+			pkg:          loadertest.Package(t, "readme"),
+			wantSections: []string{"documentation", "types"},
+			wantFragments: fragments{
+				`<h1 id="readme">Readme</h1>`,
+				`<li><a href="#links">Links</a></li>`,
+				`<a href="../shapes/index.html">Shapes</a>`,
+				`<a href="readme.go.html#L4">The source</a>`,
+				`<a href="docs/guide.md">The guide</a>`,
+				`<a href="docs/missing.md">Missing</a>`,
+				`<a href="../../outside.md">Outside</a>`,
+				`<a href="../index.html">Root</a>`,
+				`<a href="/absolute">Absolute</a>`,
+				`<a href="https://example.com/x">external</a>`,
+				`<a href="#links">Anchor</a>`,
+				`<li>[Sizer] is not a doc link.</li>`,
+				`<p align="center">Raw HTML stays.</p>`,
+				`<img src="docs/diagram.svg" alt="Diagram">`,
+			},
+		},
+		{
+			name:         "package documented by index.md",
+			pkg:          loadertest.Package(t, "indexed"),
+			wantSections: []string{"documentation", "types"},
+			wantFragments: fragments{
+				`<h1 id="indexed">Indexed</h1>`,
+				`<p>Package indexed is documented by index.md.</p>`,
+			},
+		},
+		{
+			name:         "doc comment wins over README",
+			pkg:          loadertest.Package(t, "shapes"),
+			wantSections: []string{"documentation", "types", "functions"},
+			wantFragments: fragments{
+				`<p>Package shapes declares interfaces satisfied by shapes.</p>`,
 			},
 		},
 	}

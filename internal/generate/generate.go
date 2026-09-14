@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/bitwizeshift/godoc2/internal/docfile"
 	"github.com/bitwizeshift/godoc2/internal/emit"
 	"github.com/bitwizeshift/godoc2/internal/link"
 	"github.com/bitwizeshift/godoc2/internal/model"
@@ -54,6 +55,7 @@ type run struct {
 	reporter progress.Reporter
 	module   *model.Module
 	renderer *render.Renderer
+	docfiles *docfile.Resolver
 	search   *search.Index
 }
 
@@ -66,7 +68,8 @@ func (r *run) execute(ctx context.Context) error {
 	r.module = mod
 
 	r.reporter.Stage("Indexing")
-	renderer, err := render.New(mod, link.New(mod), relate.New(mod))
+	r.docfiles = docfile.NewResolver(mod)
+	renderer, err := render.New(mod, link.New(mod), relate.New(mod), r.docfiles)
 	if err != nil {
 		return r.fail("Indexing", err)
 	}

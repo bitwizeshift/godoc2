@@ -5,6 +5,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/bitwizeshift/godoc2/internal/markdown"
 	"github.com/bitwizeshift/godoc2/internal/model"
 	"github.com/bitwizeshift/godoc2/internal/pathmap"
 	"github.com/bitwizeshift/godoc2/internal/props"
@@ -23,10 +24,7 @@ func (b *builder) modulePage(root *model.Package) *page {
 		pg.Heading = heading{Kind: "package", Name: root.DisplayName()}
 		pg.Title = root.ImportPath
 	}
-	var doc string
-	if root != nil {
-		doc = root.Doc
-	}
+	doc := b.moduleDoc(root)
 	tools := b.toolsSection()
 	packages := b.packagesSection("")
 	pg.Sections = appendSection(pg.Sections, b.docSection(doc))
@@ -41,6 +39,18 @@ func (b *builder) modulePage(root *model.Package) *page {
 	return pg
 }
 
+// moduleDoc parses the documentation of the module page: that of the root
+// package, or else the Markdown file of the module root.
+func (b *builder) moduleDoc(root *model.Package) *markdown.Document {
+	if root != nil {
+		return b.packageDoc(root)
+	}
+	if b.r.module.DocFile != nil {
+		return b.docFile(b.r.module.DocFile)
+	}
+	return nil
+}
+
 // packagePage builds the page of a package below the module root.
 func (b *builder) packagePage(p *model.Package) *page {
 	pg := b.newPage(p.ImportPath)
@@ -49,10 +59,11 @@ func (b *builder) packagePage(p *model.Package) *page {
 	if p.Tool() {
 		pg.Heading.Kind = "binary"
 	}
+	doc := b.packageDoc(p)
 	packages := b.packagesSection(p.RelPath)
-	pg.Sections = appendSection(pg.Sections, b.docSection(p.Doc))
+	pg.Sections = appendSection(pg.Sections, b.docSection(doc))
 	pg.Sections = appendSection(pg.Sections, packages)
-	pg.Sidebar = appendSidebar(pg.Sidebar, new(b.docSidebar(p.Doc)))
+	pg.Sidebar = appendSidebar(pg.Sidebar, new(b.docSidebar(doc)))
 	pg.Sidebar = appendSidebar(pg.Sidebar, b.treeSidebar(packages, p))
 	b.addPackageMembers(pg, p, packages != nil)
 	return pg
@@ -110,7 +121,8 @@ func (b *builder) packagesSection(rel string) *section {
 }
 
 func (b *builder) packageRow(p *model.Package, name string) tableRow {
-	summary, _ := b.withPackage(p).summaryAndFull(p.Doc)
+	scoped := b.withPackage(p)
+	summary, _ := scoped.summaryAndFull(scoped.packageDoc(p))
 	return tableRow{
 		Name:     name,
 		Href:     b.rel(pathmap.Package(b.r.module.Path, p.RelPath)),
@@ -137,7 +149,7 @@ func (b *builder) typePage(t *model.Type) *page {
 
 	idx := b.r.index
 	sections := []*section{
-		b.docSection(t.Doc),
+		b.docSection(b.doc(t.Doc)),
 		b.examplesSection(t.Examples),
 		badgesSection(props.Badges(t)),
 		itemsSection("instances", "Instances", b.valueItems("instance", idx.Instances(t))),
@@ -151,7 +163,7 @@ func (b *builder) typePage(t *model.Type) *page {
 		b.relationSection("implements", "Implements", relate.Groups(idx.Implements(t), t), t),
 		b.relationSection("implementations", "Implementations", relate.Groups(idx.Implementations(t), t), t),
 	)
-	pg.Sidebar = appendSidebar(pg.Sidebar, new(b.docSidebar(t.Doc)))
+	pg.Sidebar = appendSidebar(pg.Sidebar, new(b.docSidebar(b.doc(t.Doc))))
 	for _, s := range sections {
 		pg.Sections = appendSection(pg.Sections, s)
 		if s != nil && s.ID != "documentation" {
@@ -202,7 +214,8 @@ func (b *builder) valuePage(v *model.Value) *page {
 	return pg
 }
 
-func (b *builder) addDocAndExamples(pg *page, doc string, exs []*model.Example) {
+func (b *builder) addDocAndExamples(pg *page, text string, exs []*model.Example) {
+	doc := b.doc(text)
 	examples := b.examplesSection(exs)
 	pg.Sections = appendSection(pg.Sections, b.docSection(doc))
 	pg.Sections = appendSection(pg.Sections, examples)

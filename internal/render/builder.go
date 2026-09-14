@@ -49,18 +49,44 @@ func (b *builder) printer(self string) *sig.Printer {
 	return &sig.Printer{Resolver: b.r.resolver, Pkg: b.pkg, From: b.from, Self: self}
 }
 
-// doc parses a doc comment in the scope of the page package.
+// doc parses a doc comment in the scope of the page package. It returns nil
+// for a blank comment.
 func (b *builder) doc(text string) *markdown.Document {
+	if strings.TrimSpace(text) == "" {
+		return nil
+	}
 	scope := packageScope{resolver: b.r.resolver, pkg: b.pkg, from: b.from}
 	return b.r.markdown.Parse(text, scope)
 }
 
-// docSection returns the Documentation section, or nil for empty docs.
-func (b *builder) docSection(text string) *section {
-	if strings.TrimSpace(text) == "" {
+// docFile parses a Markdown documentation file. Its relative links are
+// rewritten to hrefs from the page.
+func (b *builder) docFile(f *model.DocFile) *markdown.Document {
+	doc := b.r.markdown.ParseMarkdown(f.Text)
+	doc.RewriteLinks(func(dest string) string {
+		return b.r.docfiles.Resolve(f, b.from, dest)
+	})
+	return doc
+}
+
+// packageDoc parses the documentation of p: its doc comment, or else its
+// Markdown file. It returns nil when p has neither.
+func (b *builder) packageDoc(p *model.Package) *markdown.Document {
+	if doc := b.doc(p.Doc); doc != nil {
+		return doc
+	}
+	if p.DocFile != nil {
+		return b.docFile(p.DocFile)
+	}
+	return nil
+}
+
+// docSection returns the Documentation section, or nil for a nil document.
+func (b *builder) docSection(doc *markdown.Document) *section {
+	if doc == nil {
 		return nil
 	}
-	html, err := b.doc(text).HTML()
+	html, err := doc.HTML()
 	if err != nil {
 		return nil
 	}
@@ -68,23 +94,22 @@ func (b *builder) docSection(text string) *section {
 }
 
 // docSidebar returns the Sections sidebar entry for a documented page.
-func (b *builder) docSidebar(text string) sidebarSection {
+func (b *builder) docSidebar(doc *markdown.Document) sidebarSection {
 	items := []sidebarItem{{Text: "Documentation", Href: "#documentation"}}
-	if strings.TrimSpace(text) != "" {
-		for _, h := range b.doc(text).Headings() {
+	if doc != nil {
+		for _, h := range doc.Headings() {
 			items = append(items, sidebarItem{Text: h.Text, Href: "#" + h.ID})
 		}
 	}
 	return sidebarSection{Title: "Sections", Items: items}
 }
 
-// summaryAndFull renders the first paragraph of text and, when the text has
-// more than that paragraph, the full text.
-func (b *builder) summaryAndFull(text string) (template.HTML, template.HTML) {
-	if strings.TrimSpace(text) == "" {
+// summaryAndFull renders the first paragraph of doc and, when the document
+// has more than that paragraph, the full document.
+func (b *builder) summaryAndFull(doc *markdown.Document) (template.HTML, template.HTML) {
+	if doc == nil {
 		return "", ""
 	}
-	doc := b.doc(text)
 	summary, err := doc.Summary()
 	if err != nil {
 		return "", ""
@@ -130,8 +155,8 @@ func (b *builder) examplesSection(exs []*model.Example) *section {
 			code = template.HTML(template.HTMLEscapeString(ex.Code))
 		}
 		var doc template.HTML
-		if strings.TrimSpace(ex.Doc) != "" {
-			doc, _ = b.doc(ex.Doc).HTML()
+		if parsed := b.doc(ex.Doc); parsed != nil {
+			doc, _ = parsed.HTML()
 		}
 		s.Examples = append(s.Examples, example{
 			ID:     "example-" + ex.Name,

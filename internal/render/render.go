@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"io"
 
+	"github.com/bitwizeshift/godoc2/internal/docfile"
 	"github.com/bitwizeshift/godoc2/internal/highlight"
 	"github.com/bitwizeshift/godoc2/internal/link"
 	"github.com/bitwizeshift/godoc2/internal/markdown"
@@ -34,14 +35,16 @@ type Renderer struct {
 	module    *model.Module
 	resolver  *link.Resolver
 	index     *relate.Index
+	docfiles  *docfile.Resolver
 	markdown  *markdown.Renderer
 	highlight *highlight.Highlighter
 	tmpl      *template.Template
 }
 
-// New returns a [Renderer] for mod. It returns an error if the embedded
-// templates do not parse.
-func New(mod *model.Module, resolver *link.Resolver, index *relate.Index) (*Renderer, error) {
+// New returns a [Renderer] for mod. docfiles resolves the links of Markdown
+// documentation files. It returns an error if the embedded templates do not
+// parse.
+func New(mod *model.Module, resolver *link.Resolver, index *relate.Index, docfiles *docfile.Resolver) (*Renderer, error) {
 	tmpl, err := template.ParseFS(templateFS, "templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("render: %w", err)
@@ -50,6 +53,7 @@ func New(mod *model.Module, resolver *link.Resolver, index *relate.Index) (*Rend
 		module:    mod,
 		resolver:  resolver,
 		index:     index,
+		docfiles:  docfiles,
 		markdown:  markdown.New(),
 		highlight: highlight.New(),
 		tmpl:      tmpl,
