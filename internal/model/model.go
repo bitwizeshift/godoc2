@@ -28,6 +28,20 @@ type Module struct {
 	// Deps maps the import path of every loaded dependency package to the
 	// module that provides it.
 	Deps map[string]Dependency
+
+	// DocFile is the Markdown file that documents the module root. It is set
+	// only when no package lives in the root directory.
+	DocFile *DocFile
+}
+
+// DocFile is a Markdown file that documents a directory in place of a
+// package doc comment.
+type DocFile struct {
+	// Path is the file path on disk.
+	Path string
+
+	// Text is the file contents.
+	Text string
 }
 
 // Dependency identifies the module that provides an imported package.
@@ -56,6 +70,10 @@ type Package struct {
 
 	// Doc is the raw package documentation.
 	Doc string
+
+	// DocFile is the Markdown file that documents the package. It is set only
+	// when the package has no doc comment.
+	DocFile *DocFile
 
 	// Consts, Vars, Types, and Funcs hold the exported identifiers.
 	Consts []*Value
