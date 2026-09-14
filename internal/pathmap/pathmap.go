@@ -11,6 +11,11 @@ const IndexFile = "index.html"
 // StaticDir is the directory that holds the shared assets.
 const StaticDir = "static"
 
+// Root returns the path of the root page of the site.
+func Root() string {
+	return IndexFile
+}
+
 // Module returns the path of the module page.
 func Module(modulePath string) string {
 	return path.Join(modulePath, IndexFile)

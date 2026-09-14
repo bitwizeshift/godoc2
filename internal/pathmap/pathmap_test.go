@@ -10,6 +10,18 @@ import (
 
 const module = "github.com/example/mod"
 
+func TestRoot(t *testing.T) {
+	t.Parallel()
+
+	// Act
+	p := pathmap.Root()
+
+	// Assert
+	if got, want := p, "index.html"; !cmp.Equal(got, want) {
+		t.Errorf("Root() = %q, want %q", got, want)
+	}
+}
+
 func TestModule(t *testing.T) {
 	t.Parallel()
 
