@@ -121,8 +121,40 @@
     link.addEventListener("click", function (event) { event.stopPropagation(); });
   });
 
+  /* Expand or collapse all */
+
+  var toggleAll = byID("toggle-all");
+
+  function collapsibles() {
+    return document.querySelectorAll("details.item, details.example, details.group");
+  }
+
+  function anyOpen() {
+    var all = collapsibles();
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].open) { return true; }
+    }
+    return false;
+  }
+
+  function updateToggleAll() {
+    if (!toggleAll) { return; }
+    var open = anyOpen();
+    toggleAll.textContent = open ? "[−]" : "[+]";
+    var label = open ? "Collapse all sections" : "Expand all sections";
+    toggleAll.title = label;
+    toggleAll.setAttribute("aria-label", label);
+  }
+
   function setAllDetails(open) {
-    document.querySelectorAll("details.item, details.example, details.group").forEach(function (d) { d.open = open; });
+    collapsibles().forEach(function (d) { d.open = open; });
+    updateToggleAll();
+  }
+
+  if (toggleAll) {
+    toggleAll.addEventListener("click", function () { setAllDetails(!anyOpen()); });
+    document.addEventListener("toggle", updateToggleAll, true);
+    updateToggleAll();
   }
 
   /* Search */
