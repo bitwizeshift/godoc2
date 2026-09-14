@@ -227,8 +227,8 @@ func (w *writer) interfaceObj(t *types.Interface) {
 	w.str("interface {")
 	var members []func()
 	hidden := false
-	for i := range t.NumEmbeddeds() {
-		e := t.EmbeddedType(i)
+	for e := range t.EmbeddedTypes() {
+		e := e
 		members = append(members, func() { w.typ(e) })
 	}
 	for m := range t.ExplicitMethods() {
@@ -256,12 +256,12 @@ func (w *writer) inlineInterface(t *types.Interface) {
 	}
 	w.str("interface{ ")
 	first := true
-	for i := range t.NumEmbeddeds() {
+	for etyp := range t.EmbeddedTypes() {
 		if !first {
 			w.str("; ")
 		}
 		first = false
-		w.typ(t.EmbeddedType(i))
+		w.typ(etyp)
 	}
 	for m := range t.ExplicitMethods() {
 		if !first {

@@ -124,8 +124,8 @@ func (b *builder) packageRow(p *model.Package, name string) tableRow {
 	scoped := b.withPackage(p)
 	summary, _ := scoped.summaryAndFull(scoped.packageDoc(p))
 	return tableRow{
-		Name:     name,
-		Href:     b.rel(pathmap.Package(b.r.module.Path, p.RelPath)),
+		Name:       name,
+		Href:       b.rel(pathmap.Package(b.r.module.Path, p.RelPath)),
 		Internal:   p.Internal(),
 		Deprecated: p.Deprecated(),
 		Summary:    summary,
