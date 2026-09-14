@@ -1,0 +1,37 @@
+name: Lint Go
+
+on:
+  workflow_call:
+
+jobs:
+  lint:
+    name: Lint Go
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Download dependencies
+        id: download
+        run: go mod download
+
+      - name: Check formatting
+        if: steps.download.conclusion != 'failure' && !cancelled()
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::Some files are not formatted properly"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Lint
+        if: steps.download.conclusion != 'failure' && !cancelled()
+        uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
+        with:
+          only-new-issues: true

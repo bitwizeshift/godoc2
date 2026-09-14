@@ -1,0 +1,29 @@
+name: Postsubmit
+
+on:
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: postsubmit
+  cancel-in-progress: true
+
+jobs:
+  continuous-integration:
+    name: Continuous Integration
+    uses: ./.github/workflows/continuous-integration.yaml
+    permissions:
+      contents: read
+      security-events: write
+      id-token: write
+      actions: read
+
+  continuous-deployment:
+    name: Continuous Deployment
+    needs: continuous-integration
+    uses: ./.github/workflows/continuous-deployment.yaml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

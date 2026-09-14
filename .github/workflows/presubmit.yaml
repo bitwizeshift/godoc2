@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Presubmit
+
+on:
+  pull_request:
+
+jobs:
+  continuous-integration:
+    name: Continuous Integration
+    uses: ./.github/workflows/continuous-integration.yaml
+    permissions:
+      contents: read
+      security-events: write
+      id-token: write
+      actions: read
