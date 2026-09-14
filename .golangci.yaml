@@ -1,0 +1,9 @@
+version: "2"
+linters:
+  settings:
+    staticcheck:
+      checks:
+        - all
+        # Disable staticcheck's "de-morgans law" check because this suggestion
+        # is frequently making code _more_ obfuscated. Equivalence != readable
+        - "-QF1001"
