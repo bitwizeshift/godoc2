@@ -1,0 +1,404 @@
+package loader
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"go/ast"
+	"go/doc"
+	"go/parser"
+	"go/token"
+	"go/types"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+
+	"golang.org/x/tools/go/packages"
+
+	"github.com/bitwizeshift/godoc2/internal/model"
+)
+
+var (
+	// ErrNoModule is returned when no matched package belongs to a main module.
+	ErrNoModule = errors.New("no main module")
+
+	// ErrLoad is returned when a package reports load or type errors.
+	ErrLoad = errors.New("load")
+)
+
+// Config configures a [Load] call.
+type Config struct {
+	// Dir is the working directory for pattern resolution. Empty means the
+	// current directory.
+	Dir string
+
+	// Patterns are the package patterns, such as "./...".
+	Patterns []string
+}
+
+// Load calls [Load] with the configuration.
+func (c Config) Load(ctx context.Context) (*model.Module, error) {
+	return Load(ctx, c)
+}
+
+const loadMode = packages.NeedName |
+	packages.NeedFiles |
+	packages.NeedSyntax |
+	packages.NeedTypes |
+	packages.NeedTypesInfo |
+	packages.NeedImports |
+	packages.NeedModule
+
+// Load loads the packages matched by cfg and returns the module that owns
+// them.
+//
+// It returns [ErrNoModule] if the matched packages have no main module, and
+// an error wrapping [ErrLoad] if a pattern did not match or a package failed
+// to load or type-check.
+func Load(ctx context.Context, cfg Config) (*model.Module, error) {
+	fset := token.NewFileSet()
+	pkgs, err := packages.Load(&packages.Config{
+		Context: ctx,
+		Mode:    loadMode,
+		Dir:     cfg.Dir,
+		Fset:    fset,
+	}, cfg.Patterns...)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrLoad, err)
+	}
+	if err := packageErrors(pkgs); err != nil {
+		return nil, err
+	}
+	main := mainModule(pkgs)
+	if main == nil {
+		return nil, ErrNoModule
+	}
+
+	mod := &model.Module{
+		Path:    main.Path,
+		Version: main.Version,
+		Dir:     main.Dir,
+		Fset:    fset,
+		Deps:    dependencies(pkgs),
+	}
+	for _, pkg := range pkgs {
+		if pkg.Module == nil || pkg.Module.Path != main.Path {
+			continue
+		}
+		p, err := newPackage(fset, mod, pkg)
+		if err != nil {
+			return nil, err
+		}
+		mod.Packages = append(mod.Packages, p)
+	}
+	slices.SortFunc(mod.Packages, func(lhs, rhs *model.Package) int {
+		return strings.Compare(lhs.ImportPath, rhs.ImportPath)
+	})
+	return mod, nil
+}
+
+// packageErrors returns an error wrapping [ErrLoad] for the first package
+// that reports errors.
+func packageErrors(pkgs []*packages.Package) error {
+	for _, pkg := range pkgs {
+		if len(pkg.Errors) == 0 {
+			continue
+		}
+		msgs := make([]string, 0, len(pkg.Errors))
+		for _, e := range pkg.Errors {
+			msgs = append(msgs, e.Error())
+		}
+		return fmt.Errorf("%w: %s: %s", ErrLoad, pkg.PkgPath, strings.Join(msgs, "; "))
+	}
+	return nil
+}
+
+// mainModule returns the main module of the first package that has one.
+func mainModule(pkgs []*packages.Package) *packages.Module {
+	for _, pkg := range pkgs {
+		if pkg.Module != nil && pkg.Module.Main {
+			return pkg.Module
+		}
+	}
+	return nil
+}
+
+// dependencies walks the import graph and records the module of every
+// imported package.
+func dependencies(pkgs []*packages.Package) map[string]model.Dependency {
+	deps := map[string]model.Dependency{}
+	seen := map[string]bool{}
+	var visit func(*packages.Package)
+	visit = func(pkg *packages.Package) {
+		if seen[pkg.PkgPath] {
+			return
+		}
+		seen[pkg.PkgPath] = true
+		if pkg.Module != nil && !pkg.Module.Main {
+			deps[pkg.PkgPath] = model.Dependency{
+				Path:    pkg.Module.Path,
+				Version: pkg.Module.Version,
+			}
+		}
+		for _, imp := range pkg.Imports {
+			visit(imp)
+		}
+	}
+	for _, pkg := range pkgs {
+		visit(pkg)
+	}
+	return deps
+}
+
+// newPackage builds the model of one loaded package.
+func newPackage(fset *token.FileSet, mod *model.Module, pkg *packages.Package) (*model.Package, error) {
+	dir := packageDir(pkg)
+	testFiles, err := parseTestFiles(fset, dir)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %w", ErrLoad, pkg.PkgPath, err)
+	}
+	files := slices.Concat(pkg.Syntax, testFiles)
+	dpkg, err := doc.NewFromFiles(fset, files, pkg.PkgPath)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %w", ErrLoad, pkg.PkgPath, err)
+	}
+
+	p := &model.Package{
+		ImportPath: pkg.PkgPath,
+		Name:       pkg.Name,
+		RelPath:    strings.TrimPrefix(strings.TrimPrefix(pkg.PkgPath, mod.Path), "/"),
+		Dir:        dir,
+		Doc:        dpkg.Doc,
+		TypesPkg:   pkg.Types,
+		Info:       pkg.TypesInfo,
+		Files:      sourceFiles(pkg),
+	}
+	c := &converter{fset: fset, pkg: p, scope: pkg.Types.Scope()}
+	p.Consts = c.values(dpkg.Consts, model.KindConst)
+	p.Vars = c.values(dpkg.Vars, model.KindVar)
+	p.Examples = c.examples(dpkg.Examples)
+	for _, t := range dpkg.Types {
+		p.Consts = append(p.Consts, c.values(t.Consts, model.KindConst)...)
+		p.Vars = append(p.Vars, c.values(t.Vars, model.KindVar)...)
+		p.Types = append(p.Types, c.typ(t))
+		p.Funcs = append(p.Funcs, c.funcs(t.Funcs, nil)...)
+	}
+	p.Funcs = append(p.Funcs, c.funcs(dpkg.Funcs, nil)...)
+	sortByName(p.Consts, func(v *model.Value) string { return v.Name })
+	sortByName(p.Vars, func(v *model.Value) string { return v.Name })
+	sortByName(p.Types, func(t *model.Type) string { return t.Name })
+	sortByName(p.Funcs, func(f *model.Func) string { return f.Name })
+	return p, nil
+}
+
+// packageDir returns the directory that holds the package files.
+func packageDir(pkg *packages.Package) string {
+	if pkg.Dir != "" {
+		return pkg.Dir
+	}
+	if len(pkg.GoFiles) > 0 {
+		return filepath.Dir(pkg.GoFiles[0])
+	}
+	return ""
+}
+
+// sourceFiles lists the Go files of the package, including test files,
+// sorted by name.
+func sourceFiles(pkg *packages.Package) []*model.File {
+	var files []*model.File
+	for _, path := range pkg.GoFiles {
+		files = append(files, &model.File{Name: filepath.Base(path), Path: path})
+	}
+	dir := packageDir(pkg)
+	for _, name := range testFileNames(dir) {
+		files = append(files, &model.File{Name: name, Path: filepath.Join(dir, name)})
+	}
+	sortByName(files, func(f *model.File) string { return f.Name })
+	return files
+}
+
+// testFileNames lists the _test.go files in dir. A directory that cannot be
+// read yields no names.
+func testFileNames(dir string) []string {
+	if dir == "" {
+		return nil
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	var names []string
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), "_test.go") {
+			names = append(names, e.Name())
+		}
+	}
+	return names
+}
+
+// parseTestFiles parses the _test.go files in dir with comments, so that
+// examples can be extracted from them.
+func parseTestFiles(fset *token.FileSet, dir string) ([]*ast.File, error) {
+	var files []*ast.File
+	for _, name := range testFileNames(dir) {
+		f, err := parser.ParseFile(fset, filepath.Join(dir, name), nil, parser.ParseComments)
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, f)
+	}
+	return files, nil
+}
+
+func sortByName[T any](items []T, name func(T) string) {
+	slices.SortStableFunc(items, func(lhs, rhs T) int {
+		return strings.Compare(name(lhs), name(rhs))
+	})
+}
+
+// converter turns [go/doc] entities into model entities for one package.
+type converter struct {
+	fset  *token.FileSet
+	pkg   *model.Package
+	scope *types.Scope
+}
+
+func (c *converter) values(vals []*doc.Value, kind model.ValueKind) []*model.Value {
+	var result []*model.Value
+	for _, v := range vals {
+		for _, spec := range v.Decl.Specs {
+			vs, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+			for _, name := range vs.Names {
+				if !name.IsExported() {
+					continue
+				}
+				result = append(result, &model.Value{
+					Name: name.Name,
+					Kind: kind,
+					Doc:  valueDoc(v, vs),
+					Decl: v.Decl,
+					Spec: vs,
+					Obj:  c.scope.Lookup(name.Name),
+					Pkg:  c.pkg,
+				})
+			}
+		}
+	}
+	return result
+}
+
+// valueDoc returns the documentation of one spec in a value group, falling
+// back to the group documentation.
+func valueDoc(v *doc.Value, spec *ast.ValueSpec) string {
+	if spec.Doc != nil {
+		return spec.Doc.Text()
+	}
+	return v.Doc
+}
+
+func (c *converter) typ(t *doc.Type) *model.Type {
+	spec := typeSpec(t)
+	obj, _ := c.scope.Lookup(t.Name).(*types.TypeName)
+	mt := &model.Type{
+		Name:     t.Name,
+		Kind:     typeKind(spec, obj),
+		Doc:      t.Doc,
+		Decl:     t.Decl,
+		Spec:     spec,
+		Obj:      obj,
+		Examples: c.examples(t.Examples),
+		Pkg:      c.pkg,
+	}
+	mt.Methods = c.funcs(t.Methods, mt)
+	sortByName(mt.Methods, func(f *model.Func) string { return f.Name })
+	return mt
+}
+
+// typeSpec returns the spec of the named type inside its declaration group.
+func typeSpec(t *doc.Type) *ast.TypeSpec {
+	for _, spec := range t.Decl.Specs {
+		if ts, ok := spec.(*ast.TypeSpec); ok && ts.Name.Name == t.Name {
+			return ts
+		}
+	}
+	return nil
+}
+
+func typeKind(spec *ast.TypeSpec, obj *types.TypeName) model.TypeKind {
+	if spec != nil && spec.Assign.IsValid() {
+		return model.KindAlias
+	}
+	if obj == nil {
+		return model.KindOther
+	}
+	switch obj.Type().Underlying().(type) {
+	case *types.Struct:
+		return model.KindStruct
+	case *types.Interface:
+		return model.KindInterface
+	default:
+		return model.KindOther
+	}
+}
+
+func (c *converter) funcs(fns []*doc.Func, recv *model.Type) []*model.Func {
+	var result []*model.Func
+	for _, f := range fns {
+		if f.Decl == nil || !f.Decl.Name.IsExported() {
+			continue
+		}
+		obj := c.funcObject(f, recv)
+		if obj == nil {
+			continue
+		}
+		result = append(result, &model.Func{
+			Name:     f.Name,
+			Doc:      f.Doc,
+			Decl:     f.Decl,
+			Obj:      obj,
+			Recv:     recv,
+			Examples: c.examples(f.Examples),
+			Pkg:      c.pkg,
+		})
+	}
+	return result
+}
+
+// funcObject finds the type-checker object of a function or method.
+func (c *converter) funcObject(f *doc.Func, recv *model.Type) *types.Func {
+	if recv == nil {
+		obj, _ := c.scope.Lookup(f.Name).(*types.Func)
+		return obj
+	}
+	if recv.Obj == nil {
+		return nil
+	}
+	named, ok := recv.Obj.Type().(*types.Named)
+	if !ok {
+		return nil
+	}
+	for m := range named.Methods() {
+		if m.Name() == f.Name {
+			return m
+		}
+	}
+	return nil
+}
+
+func (c *converter) examples(exs []*doc.Example) []*model.Example {
+	var result []*model.Example
+	for _, ex := range exs {
+		result = append(result, &model.Example{
+			Name:   ex.Name,
+			Suffix: ex.Suffix,
+			Doc:    ex.Doc,
+			Code:   formatExample(c.fset, ex),
+			Output: ex.Output,
+		})
+	}
+	return result
+}
