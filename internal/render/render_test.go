@@ -63,7 +63,7 @@ func TestRenderer_Module(t *testing.T) {
 		`<h1><span class="kind">package</span> sample</h1>`,
 		`<a class="badge badge-module" href="index.html">module</a>`,
 		`<td><a href="cmd/tool/index.html">tool</a></td>`,
-		`<td><a href="internal/secret/index.html">internal/secret</a> <span class="badge">internal</span></td>`,
+		`<td><a href="internal/secret/index.html">internal/secret</a> <span class="badge badge-internal">internal</span></td>`,
 		`<td><a href="shapes/index.html">shapes</a></td>`,
 		`<summary><span class="dir">internal</span></summary>`,
 		`<h1 id="usage">Usage</h1>`,
@@ -116,7 +116,7 @@ func TestRenderer_Package(t *testing.T) {
 			pkg:          loadertest.Package(t, "internal/secret"),
 			wantSections: []string{"documentation", "types"},
 			wantFragments: fragments{
-				`<h1><span class="kind">package</span> secret <span class="badge">internal</span></h1>`,
+				`<h1><span class="kind">package</span> secret <span class="badge badge-internal">internal</span></h1>`,
 				`<span class="sep">/</span><span class="crumb">internal</span><span class="sep">/</span><a href="index.html">secret</a>`,
 			},
 		},
@@ -232,7 +232,7 @@ func TestRenderer_Type(t *testing.T) {
 			typ:          loadertest.Type(t, "internal/secret", "Token"),
 			wantSections: []string{"documentation", "properties"},
 			wantFragments: fragments{
-				`<h1><span class="kind">struct</span> Token <span class="badge">internal</span></h1>`,
+				`<h1><span class="kind">struct</span> Token <span class="badge badge-internal">internal</span></h1>`,
 				`<span class="badge-label">internal</span>`,
 			},
 		},

@@ -10,6 +10,8 @@
   --color-border-light: #e0e0e0;
   --color-badge: #e6f4f8;
   --color-badge-text: #005a72;
+  --color-badge-internal: #fdf1dc;
+  --color-badge-internal-text: #7a4b00;
   --color-sidebar: #f7f9fa;
   --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-code: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
@@ -26,6 +28,8 @@
   --color-border-light: #3a3c3f;
   --color-badge: #1f3c47;
   --color-badge-text: #9fdcee;
+  --color-badge-internal: #4a3610;
+  --color-badge-internal-text: #f2c777;
   --color-sidebar: #1a1c1e;
 }
 
@@ -41,6 +45,8 @@
     --color-border-light: #3a3c3f;
     --color-badge: #1f3c47;
     --color-badge-text: #9fdcee;
+    --color-badge-internal: #4a3610;
+    --color-badge-internal-text: #f2c777;
     --color-sidebar: #1a1c1e;
   }
 }
@@ -203,6 +209,8 @@ kbd {
   white-space: nowrap;
 }
 a.badge:hover { text-decoration: none; background: var(--color-accent); color: #fff; }
+
+.badge-internal { background: var(--color-badge-internal); color: var(--color-badge-internal-text); }
 
 .badge-receiver code { font-size: 0.8rem; }
 

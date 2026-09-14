@@ -23,7 +23,7 @@
     {{- else}}
     <ul>
       {{- range .Items}}
-      <li><a href="{{.Href}}">{{.Text}}</a>{{if .Internal}} <span class="badge">internal</span>{{end}}</li>
+      <li><a href="{{.Href}}">{{.Text}}</a>{{if .Internal}} <span class="badge badge-internal">internal</span>{{end}}</li>
       {{- end}}
     </ul>
     {{- end}}
@@ -71,7 +71,7 @@
   <section id="search-results" hidden></section>
   <section id="content">
     <div class="main-heading">
-      <h1><span class="kind">{{.Heading.Kind}}</span> {{.Heading.Name}}{{if .Heading.Internal}} <span class="badge">internal</span>{{end}}</h1>
+      <h1><span class="kind">{{.Heading.Kind}}</span> {{.Heading.Name}}{{if .Heading.Internal}} <span class="badge badge-internal">internal</span>{{end}}</h1>
       {{- if .SourceHref}}<a class="src" href="{{.SourceHref}}">source</a>{{end}}
     </div>
     {{- if .Definition}}
@@ -91,7 +91,7 @@
       <table class="item-table">
         {{- range .Rows}}
         <tr>
-          <td><a href="{{.Href}}">{{.Name}}</a>{{if .Internal}} <span class="badge">internal</span>{{end}}</td>
+          <td><a href="{{.Href}}">{{.Name}}</a>{{if .Internal}} <span class="badge badge-internal">internal</span>{{end}}</td>
           <td class="summary">{{.Summary}}</td>
         </tr>
         {{- end}}
@@ -99,7 +99,7 @@
       {{- else if eq .Kind "badges"}}
       <ul class="badges">
         {{- range .Badges}}
-        <li class="badge badge-prop"><span class="badge-label">{{.Label}}</span>{{if .Value}} <span class="badge-value">{{.Value}}</span>{{end}}</li>
+        <li class="badge badge-prop{{if eq .Label "internal"}} badge-internal{{end}}"><span class="badge-label">{{.Label}}</span>{{if .Value}} <span class="badge-value">{{.Value}}</span>{{end}}</li>
         {{- end}}
       </ul>
       {{- else if eq .Kind "examples"}}
@@ -151,12 +151,12 @@
   {{- end}}
 </ul>
 {{end}}
-{{define "treelabel"}}{{if .Href}}<a href="{{.Href}}">{{.Text}}</a>{{else}}<span class="dir">{{.Text}}</span>{{end}}{{if .Internal}} <span class="badge">internal</span>{{end}}{{end}}
+{{define "treelabel"}}{{if .Href}}<a href="{{.Href}}">{{.Text}}</a>{{else}}<span class="dir">{{.Text}}</span>{{end}}{{if .Internal}} <span class="badge badge-internal">internal</span>{{end}}{{end}}
 {{define "item"}}
 <details class="item" id="{{.ID}}" open>
   <summary>
     <div class="item-code">{{.Code}}</div>
-    <div class="item-links">{{if .Receiver}}<span class="badge badge-receiver" title="implemented by {{.Receiver}}"><code>{{.Receiver}}</code></span> {{end}}{{if .Internal}}<span class="badge">internal</span> {{end}}{{if .SourceHref}}<a class="src" href="{{.SourceHref}}">source</a>{{end}}</div>
+    <div class="item-links">{{if .Receiver}}<span class="badge badge-receiver" title="implemented by {{.Receiver}}"><code>{{.Receiver}}</code></span> {{end}}{{if .Internal}}<span class="badge badge-internal">internal</span> {{end}}{{if .SourceHref}}<a class="src" href="{{.SourceHref}}">source</a>{{end}}</div>
   </summary>
   {{- if .Summary}}
   <div class="item-doc">
