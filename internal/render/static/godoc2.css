@@ -12,6 +12,7 @@
   --color-badge-text: #005a72;
   --color-badge-internal: #fdf1dc;
   --color-badge-internal-text: #7a4b00;
+  --color-badge-internal-border: #e3c78e;
   --color-sidebar: #f7f9fa;
   --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-code: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
@@ -28,8 +29,9 @@
   --color-border-light: #3a3c3f;
   --color-badge: #1f3c47;
   --color-badge-text: #9fdcee;
-  --color-badge-internal: #4a3610;
-  --color-badge-internal-text: #f2c777;
+  --color-badge-internal: #2a2308;
+  --color-badge-internal-text: #f0b72f;
+  --color-badge-internal-border: #6b5615;
   --color-sidebar: #1a1c1e;
 }
 
@@ -45,8 +47,9 @@
     --color-border-light: #3a3c3f;
     --color-badge: #1f3c47;
     --color-badge-text: #9fdcee;
-    --color-badge-internal: #4a3610;
-    --color-badge-internal-text: #f2c777;
+    --color-badge-internal: #2a2308;
+    --color-badge-internal-text: #f0b72f;
+    --color-badge-internal-border: #6b5615;
     --color-sidebar: #1a1c1e;
   }
 }
@@ -213,12 +216,19 @@ kbd {
 }
 a.badge:hover { text-decoration: none; background: var(--color-accent); color: #fff; }
 
-.badge-internal { background: var(--color-badge-internal); color: var(--color-badge-internal-text); }
+.badge-internal {
+  background: var(--color-badge-internal);
+  color: var(--color-badge-internal-text);
+  border: 1px solid var(--color-badge-internal-border);
+  padding: 0.05em 0.6em;
+  margin-left: 0.4em;
+}
 
 .badge-receiver code { font-size: 0.8rem; }
 
 .badges { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .badge-prop { font-size: 0.85rem; padding: 0.15em 0.7em; }
+.badges .badge-internal { margin-left: 0; }
 .badge-value { font-weight: 400; }
 
 /* Headings */
