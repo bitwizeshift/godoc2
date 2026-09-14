@@ -18,6 +18,7 @@ const (
 	DefaultPattern = "./..."
 
 	outputGroup = "Output Flags"
+	inputGroup  = "Input Flags"
 )
 
 // OutputFlags owns the --output flag and builds the output sink from it.
@@ -80,26 +81,41 @@ func (f *ProgressFlags) Reporter(ctx context.Context) progress.Reporter {
 	return progress.NewWriter(cli.OutStream(ctx), f.verbose)
 }
 
-// PatternArgs owns the package pattern arguments.
+// PatternArgs owns the package pattern arguments and the --workspace flag.
 type PatternArgs struct {
-	patterns []string
+	patterns  []string
+	workspace string
 }
 
-// RegisterArgs registers the trailing pattern arguments.
+// RegisterArgs registers --workspace/-w and the trailing pattern arguments.
 func (p *PatternArgs) RegisterArgs(cl *arg.CommandLine) {
+	workspace := arg.Flag("workspace", &p.workspace,
+		arg.Shorthand("w"),
+		arg.ValueLabel("file"),
+		arg.Usage("go.work file whose modules are documented, each as <dir>/..."),
+		arg.CompleteFiles(),
+	)
+	cl.Add(workspace)
+	arg.Group(inputGroup, workspace)
 	cl.Add(arg.Unmatched("patterns", &p.patterns,
 		arg.Usage("packages to document, as accepted by go build (default ./...)"),
-		arg.DefaultValue(DefaultPattern),
 		arg.CompleteDirs(),
 	))
 }
 
 var _ arg.Registrar = (*PatternArgs)(nil)
 
-// Patterns returns the package patterns.
+// Patterns returns the package patterns. Without a workspace file the
+// default pattern stands in for missing patterns. With one, the modules of
+// the file are the default and Patterns returns only the given patterns.
 func (p *PatternArgs) Patterns() []string {
-	if len(p.patterns) == 0 {
+	if len(p.patterns) == 0 && p.workspace == "" {
 		return []string{DefaultPattern}
 	}
 	return p.patterns
+}
+
+// Workspace returns the go.work file path, or empty when none was given.
+func (p *PatternArgs) Workspace() string {
+	return p.workspace
 }

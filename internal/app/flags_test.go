@@ -22,6 +22,7 @@ func TestBuilder_RegistersArguments(t *testing.T) {
 	wantFlags := []*argtest.Flag{
 		{Long: "output", Shorthand: "o", ValueLabel: "dir", Group: "Output Flags"},
 		{Long: "verbose", Shorthand: "v", ValueLabel: "bool", Group: "Output Flags"},
+		{Long: "workspace", Shorthand: "w", ValueLabel: "file", Group: "Input Flags"},
 	}
 	wantUnmatched := &argtest.Unmatched{
 		Name:  "patterns",
@@ -166,6 +167,16 @@ func TestPatternArgs_Patterns(t *testing.T) {
 			args: []string{"./cmd/...", "./internal/app"},
 			want: []string{"./cmd/...", "./internal/app"},
 		},
+		{
+			name: "workspace only",
+			args: []string{"--workspace", "go.work"},
+			want: nil,
+		},
+		{
+			name: "workspace and patterns",
+			args: []string{"-w", "go.work", "./cmd/..."},
+			want: []string{"./cmd/..."},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -182,8 +193,54 @@ func TestPatternArgs_Patterns(t *testing.T) {
 			patterns := sut.Patterns()
 
 			// Assert
-			if got, want := patterns, tc.want; !cmp.Equal(got, want) {
+			if got, want := patterns, tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
 				t.Errorf("PatternArgs.Patterns() = %v, want %v", got, want)
+			}
+		})
+	}
+}
+
+func TestPatternArgs_Workspace(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{
+			name: "default",
+			args: nil,
+			want: "",
+		},
+		{
+			name: "long flag",
+			args: []string{"--workspace", "go.work"},
+			want: "go.work",
+		},
+		{
+			name: "short flag",
+			args: []string{"-w", "tools/go.work"},
+			want: "tools/go.work",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			cl := argtest.NewCommandLine()
+			sut := &app.PatternArgs{}
+			arg.Register(cl, sut)
+			argtest.MustParse(t, cl, tc.args...)
+
+			// Act
+			workspace := sut.Workspace()
+
+			// Assert
+			if got, want := workspace, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("PatternArgs.Workspace() = %q, want %q", got, want)
 			}
 		})
 	}

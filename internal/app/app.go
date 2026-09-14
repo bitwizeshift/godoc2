@@ -37,7 +37,10 @@ func NewBuilder() *Builder {
 func (b *Builder) Build(ctx context.Context) (cli.Runner, error) {
 	return &Runner{
 		Generator: &generate.Generator{
-			Loader:   loader.Config{Patterns: b.Patterns.Patterns()},
+			Loader: loader.Config{
+				Patterns:  b.Patterns.Patterns(),
+				Workspace: b.Patterns.Workspace(),
+			},
 			Sink:     b.Output.Sink(),
 			Reporter: b.Progress.Reporter(ctx),
 		},
