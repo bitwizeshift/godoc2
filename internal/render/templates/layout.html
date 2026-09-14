@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-root="{{.Root}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+<link rel="stylesheet" href="{{.CSS}}">
+<script>(function(){try{var t=localStorage.getItem("godoc2-theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t);}var w=localStorage.getItem("godoc2-sidebar-width");if(w){document.documentElement.style.setProperty("--sidebar-width",w+"px");}}catch(e){}})();</script>
+</head>
+<body>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-inner">
+    <a class="sidebar-logo" href="{{.ModuleHref}}" title="{{.ModulePath}}" aria-label="Module index">
+      <svg viewBox="0 0 64 64" width="40" height="40" role="img" aria-hidden="true">
+        <rect width="64" height="64" rx="12" fill="#00add8"/>
+        <text x="32" y="43" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-weight="700" font-size="30" fill="#fff">Go</text>
+      </svg>
+    </a>
+    {{- range .Sidebar}}
+    <h3>{{.Title}}</h3>
+    {{- if .Tree}}
+    {{template "tree" .Tree}}
+    {{- else}}
+    <ul>
+      {{- range .Items}}
+      <li><a href="{{.Href}}">{{.Text}}</a>{{if .Internal}} <span class="badge">internal</span>{{end}}</li>
+      {{- end}}
+    </ul>
+    {{- end}}
+    {{- end}}
+  </div>
+  <div class="sidebar-resizer" id="sidebar-resizer" title="Drag to resize"></div>
+</nav>
+<main id="main">
+  <header class="topbar">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      {{- range .Breadcrumb}}
+      {{- if .Separator}}<span class="sep">{{.Separator}}</span>{{end}}
+      {{- if .Module}}<a class="badge badge-module" href="{{.Href}}">module</a>
+      {{- else if .Href}}<a href="{{.Href}}">{{.Text}}</a>
+      {{- else}}<span class="crumb">{{.Text}}</span>{{end}}
+      {{- end}}
+    </nav>
+    <form class="search" role="search" onsubmit="return false">
+      <input id="search-input" type="search" placeholder="Click or press ‘S’ to search…" autocomplete="off" aria-label="Search">
+    </form>
+    <div class="topbar-buttons">
+      <button id="settings-button" type="button" aria-label="Settings" title="Settings">&#9881;</button>
+      <button id="help-button" type="button" aria-label="Help" title="Help">?</button>
+    </div>
+  </header>
+  <div id="settings-menu" class="popover" hidden>
+    <h3>Settings</h3>
+    <label>Theme
+      <select id="theme-select">
+        <option value="system">System</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </label>
+  </div>
+  <div id="help-panel" class="popover" hidden>
+    <h3>Keyboard shortcuts</h3>
+    <dl>
+      <dt><kbd>S</kbd> / <kbd>/</kbd></dt><dd>Focus the search bar</dd>
+      <dt><kbd>Esc</kbd></dt><dd>Close search results and panels</dd>
+      <dt><kbd>?</kbd></dt><dd>Show this help</dd>
+      <dt><kbd>+</kbd> / <kbd>-</kbd></dt><dd>Expand or collapse all sections</dd>
+    </dl>
+  </div>
+  <section id="search-results" hidden></section>
+  <section id="content">
+    <div class="main-heading">
+      <h1><span class="kind">{{.Heading.Kind}}</span> {{.Heading.Name}}{{if .Heading.Internal}} <span class="badge">internal</span>{{end}}</h1>
+      {{- if .SourceHref}}<a class="src" href="{{.SourceHref}}">source</a>{{end}}
+    </div>
+    {{- if .Definition}}
+    <div class="definition">{{.Definition}}</div>
+    {{- end}}
+    {{- range .Sections}}
+    {{- if eq .Kind "message"}}
+    <p class="message" id="{{.ID}}">{{.Message}}</p>
+    {{- else if eq .Kind "raw"}}
+    <div class="source" id="{{.ID}}">{{.HTML}}</div>
+    {{- else}}
+    <section class="section" id="{{.ID}}">
+      <h2><a class="anchor" href="#{{.ID}}">{{.Title}}</a></h2>
+      {{- if eq .Kind "doc"}}
+      <div class="docblock">{{.HTML}}</div>
+      {{- else if eq .Kind "table"}}
+      <table class="item-table">
+        {{- range .Rows}}
+        <tr>
+          <td><a href="{{.Href}}">{{.Name}}</a>{{if .Internal}} <span class="badge">internal</span>{{end}}</td>
+          <td class="summary">{{.Summary}}</td>
+        </tr>
+        {{- end}}
+      </table>
+      {{- else if eq .Kind "badges"}}
+      <ul class="badges">
+        {{- range .Badges}}
+        <li class="badge badge-prop"><span class="badge-label">{{.Label}}</span>{{if .Value}} <span class="badge-value">{{.Value}}</span>{{end}}</li>
+        {{- end}}
+      </ul>
+      {{- else if eq .Kind "examples"}}
+      {{- range .Examples}}
+      <details class="example" id="{{.ID}}">
+        <summary>{{.Title}}</summary>
+        {{- if .Doc}}<div class="docblock">{{.Doc}}</div>{{end}}
+        <div class="example-code">{{.Code}}</div>
+        {{- if .Output}}
+        <p class="example-output-label">Output:</p>
+        <pre class="example-output">{{.Output}}</pre>
+        {{- end}}
+      </details>
+      {{- end}}
+      {{- else if eq .Kind "items"}}
+      {{- range .Items}}{{template "item" .}}{{end}}
+      {{- else if eq .Kind "relations"}}
+      {{- range .Groups}}
+      {{- if .Path}}
+      <details class="group" open>
+        <summary><h3 class="relation-path">{{.Path}}</h3></summary>
+        {{- range .Items}}{{template "item" .}}{{end}}
+      </details>
+      {{- else}}
+      {{- range .Items}}{{template "item" .}}{{end}}
+      {{- end}}
+      {{- end}}
+      {{- end}}
+    </section>
+    {{- end}}
+    {{- end}}
+  </section>
+</main>
+<script src="{{.IndexJS}}"></script>
+<script src="{{.JS}}"></script>
+</body>
+</html>
+{{define "tree"}}
+<ul class="tree">
+  {{- range .}}
+  <li>
+    {{- if .Children}}
+    <details{{if .Open}} open{{end}}>
+      <summary>{{template "treelabel" .}}</summary>
+      {{template "tree" .Children}}
+    </details>
+    {{- else}}{{template "treelabel" .}}{{end}}
+  </li>
+  {{- end}}
+</ul>
+{{end}}
+{{define "treelabel"}}{{if .Href}}<a href="{{.Href}}">{{.Text}}</a>{{else}}<span class="dir">{{.Text}}</span>{{end}}{{if .Internal}} <span class="badge">internal</span>{{end}}{{end}}
+{{define "item"}}
+<details class="item" id="{{.ID}}" open>
+  <summary>
+    <div class="item-code">{{.Code}}</div>
+    <div class="item-links">{{if .Receiver}}<span class="badge badge-receiver" title="implemented by {{.Receiver}}"><code>{{.Receiver}}</code></span> {{end}}{{if .Internal}}<span class="badge">internal</span> {{end}}{{if .SourceHref}}<a class="src" href="{{.SourceHref}}">source</a>{{end}}</div>
+  </summary>
+  {{- if .Summary}}
+  <div class="item-doc">
+    <div class="docblock summary">{{.Summary}}</div>
+    {{- if .Full}}
+    <button type="button" class="read-more">Read more</button>
+    <div class="docblock full" hidden>{{.Full}}</div>
+    {{- end}}
+  </div>
+  {{- end}}
+</details>
+{{end}}
