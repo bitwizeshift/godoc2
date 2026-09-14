@@ -53,7 +53,7 @@
 
 * { box-sizing: border-box; }
 
-html { font-size: 16px; }
+html { font-size: 16px; scroll-behavior: smooth; }
 
 body {
   margin: 0;
