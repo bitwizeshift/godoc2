@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"html/template"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -149,7 +150,7 @@ func (b *builder) sourceHref(n ast.Node) string {
 	if !pos.IsValid() {
 		return ""
 	}
-	file := path.Base(pos.Filename)
+	file := filepath.Base(pos.Filename)
 	return b.rel(pathmap.Source(b.pkg.Module.Path, b.pkg.RelPath, file)) + "#L" + strconv.Itoa(pos.Line)
 }
 
