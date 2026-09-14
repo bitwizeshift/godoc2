@@ -26,17 +26,19 @@ func NewWriter(w io.Writer, verbose bool) *Writer {
 	return &Writer{w: w, verbose: verbose}
 }
 
-// Stage prints the stage name.
+// Stage prints the stage name. A write error is dropped: progress output is
+// advisory and must not stop generation.
 func (w *Writer) Stage(name string) {
-	fmt.Fprintln(w.w, name)
+	_, _ = fmt.Fprintln(w.w, name)
 }
 
-// File prints the file path, indented, when verbose output is enabled.
+// File prints the file path, indented, when verbose output is enabled. A
+// write error is dropped for the same reason as in [Writer.Stage].
 func (w *Writer) File(path string) {
 	if !w.verbose {
 		return
 	}
-	fmt.Fprintf(w.w, "  %s\n", path)
+	_, _ = fmt.Fprintf(w.w, "  %s\n", path)
 }
 
 var _ Reporter = (*Writer)(nil)
