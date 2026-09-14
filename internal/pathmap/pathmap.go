@@ -42,6 +42,12 @@ func Source(modulePath, rel, file string) string {
 	return path.Join(modulePath, rel, file+".html")
 }
 
+// File returns the path of a file copied from the module directory. rel is
+// the file path relative to the module root.
+func File(modulePath, rel string) string {
+	return path.Join(modulePath, rel)
+}
+
 // Static returns the path of a shared asset.
 func Static(name string) string {
 	return path.Join(StaticDir, name)

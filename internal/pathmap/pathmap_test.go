@@ -93,6 +93,18 @@ func TestSource(t *testing.T) {
 	}
 }
 
+func TestFile(t *testing.T) {
+	t.Parallel()
+
+	// Act
+	p := pathmap.File(module, "docs/images/logo.png")
+
+	// Assert
+	if got, want := p, "github.com/example/mod/docs/images/logo.png"; !cmp.Equal(got, want) {
+		t.Errorf("File(...) = %q, want %q", got, want)
+	}
+}
+
 func TestStatic(t *testing.T) {
 	t.Parallel()
 
