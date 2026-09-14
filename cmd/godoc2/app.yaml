@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bitwizeshift/go-cli/refs/heads/master/command.schema.json
+name: godoc2
+summary: Generates detailed, rustdoc-style HTML documentation for a Go module
+description: |
+  godoc2 is a documentation generator for Go. It produces a static HTML site
+  with the layout of rustdoc and more detail than the standard Go docs.
+
+  Every package, type, function, method, constant, and variable gets its own
+  page. A type page shows its cleaned-up definition, size and alignment, whether
+  it is comparable or sealed, the values that are instances of it, the functions
+  that construct or use it, its methods, and the interfaces it implements. An
+  interface page lists the types that implement it, including types from the
+  standard library and from other modules. Every identifier in a definition
+  links to its documentation, and every entry links to the highlighted source.
+  Doc comments render as GitHub Flavored Markdown with Go doc links.
+
+  The site is written to the output directory (dist by default). Open
+  <output>/<module path>/index.html in a browser to read it. The pages include
+  a search bar, a resizable navigation sidebar, and a light and dark theme.
+
+  The patterns select the packages to document, in the form accepted by go
+  build. Only packages of the current module are documented.
+examples:
+  - godoc2
+  - godoc2 -o docs
+  - godoc2 ./internal/...
+  - godoc2 --verbose -o public ./...
+issue-url: https://github.com/bitwizeshift/godoc2/issues
