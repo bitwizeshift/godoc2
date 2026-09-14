@@ -14,32 +14,64 @@ import (
 // SamplePath is the module path of the fixture module.
 const SamplePath = "example.com/sample"
 
+// BarePath is the module path of the fixture module without a root package.
+const BarePath = "example.com/bare"
+
+// fixture loads one fixture module once per test binary.
+type fixture struct {
+	dir  string
+	once sync.Once
+	mod  *model.Module
+	err  error
+}
+
+func (f *fixture) load(t testing.TB) *model.Module {
+	t.Helper()
+	f.once.Do(func() {
+		f.mod, f.err = loader.Load(context.Background(), loader.Config{
+			Dir:      f.dir,
+			Patterns: []string{"./..."},
+		})
+	})
+	if f.err != nil {
+		t.Fatalf("loader.Load(...) = %v, want nil", f.err)
+	}
+	return f.mod
+}
+
 var (
-	sampleOnce sync.Once
-	sampleMod  *model.Module
-	sampleErr  error
+	sample = &fixture{dir: fixtureDir("sample")}
+	bare   = &fixture{dir: fixtureDir("bare")}
 )
 
 // Sample returns the loaded fixture module. The module is loaded once per
 // test binary and shared, so callers must not modify it.
 func Sample(t testing.TB) *model.Module {
 	t.Helper()
-	sampleOnce.Do(func() {
-		sampleMod, sampleErr = loader.Load(context.Background(), loader.Config{
-			Dir:      SampleDir(),
-			Patterns: []string{"./..."},
-		})
-	})
-	if sampleErr != nil {
-		t.Fatalf("loader.Load(...) = %v, want nil", sampleErr)
-	}
-	return sampleMod
+	return sample.load(t)
 }
 
 // SampleDir returns the absolute directory of the fixture module.
 func SampleDir() string {
+	return sample.dir
+}
+
+// Bare returns the loaded fixture module that has a README.md and no package
+// in its root directory. The module is loaded once per test binary and
+// shared, so callers must not modify it.
+func Bare(t testing.TB) *model.Module {
+	t.Helper()
+	return bare.load(t)
+}
+
+// BareDir returns the absolute directory of the bare fixture module.
+func BareDir() string {
+	return bare.dir
+}
+
+func fixtureDir(name string) string {
 	_, file, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(file), "..", "testdata", "sample")
+	return filepath.Join(filepath.Dir(file), "..", "testdata", name)
 }
 
 // Package returns the fixture package with the given path relative to the

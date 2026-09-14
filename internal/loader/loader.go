@@ -16,6 +16,7 @@ import (
 
 	"golang.org/x/tools/go/packages"
 
+	"github.com/bitwizeshift/godoc2/internal/docfile"
 	"github.com/bitwizeshift/godoc2/internal/model"
 )
 
@@ -95,7 +96,26 @@ func Load(ctx context.Context, cfg Config) (*model.Module, error) {
 	slices.SortFunc(mod.Packages, func(lhs, rhs *model.Package) int {
 		return strings.Compare(lhs.ImportPath, rhs.ImportPath)
 	})
+	if err := moduleDocFile(mod); err != nil {
+		return nil, err
+	}
 	return mod, nil
+}
+
+// moduleDocFile attaches the Markdown file of the module root when no
+// package lives there.
+func moduleDocFile(mod *model.Module) error {
+	for _, p := range mod.Packages {
+		if p.RelPath == "" {
+			return nil
+		}
+	}
+	f, err := docfile.Find(mod.Dir)
+	if err != nil {
+		return fmt.Errorf("%w: %s: %w", ErrLoad, mod.Path, err)
+	}
+	mod.DocFile = f
+	return nil
 }
 
 // packageErrors returns an error wrapping [ErrLoad] for the first package
@@ -173,6 +193,12 @@ func newPackage(fset *token.FileSet, mod *model.Module, pkg *packages.Package) (
 		TypesPkg:   pkg.Types,
 		Info:       pkg.TypesInfo,
 		Files:      sourceFiles(pkg),
+	}
+	if strings.TrimSpace(p.Doc) == "" {
+		p.DocFile, err = docfile.Find(dir)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s: %w", ErrLoad, pkg.PkgPath, err)
+		}
 	}
 	c := &converter{fset: fset, pkg: p, scope: pkg.Types.Scope()}
 	p.Consts = c.values(dpkg.Consts, model.KindConst)

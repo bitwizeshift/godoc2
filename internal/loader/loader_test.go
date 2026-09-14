@@ -20,6 +20,7 @@ type packageSummary struct {
 	Internal   bool
 	Tool       bool
 	Summary    string
+	DocFile    string
 	Consts     []string
 	Vars       []string
 	Types      map[string][]string
@@ -39,6 +40,9 @@ func summarize(pkgs []*model.Package) []packageSummary {
 			Tool:       p.Tool(),
 			Summary:    p.Summary(),
 			Types:      map[string][]string{},
+		}
+		if p.DocFile != nil {
+			s.DocFile = filepath.Base(p.DocFile.Path)
 		}
 		for _, v := range p.Consts {
 			s.Consts = append(s.Consts, v.Name)
@@ -69,7 +73,12 @@ func summarize(pkgs []*model.Package) []packageSummary {
 
 func fixtureDir(t testing.TB) string {
 	t.Helper()
-	dir, err := filepath.Abs(filepath.Join("testdata", "sample"))
+	return testdataDir(t, "sample")
+}
+
+func testdataDir(t testing.TB, name string) string {
+	t.Helper()
+	dir, err := filepath.Abs(filepath.Join("testdata", name))
 	if err != nil {
 		t.Fatalf("Abs(...) = %v, want nil", err)
 	}
@@ -124,6 +133,14 @@ func TestLoad_WithFixtureModule_ReturnsModule(t *testing.T) {
 			Files:      []string{"empty.go"},
 		},
 		{
+			ImportPath: "example.com/sample/indexed",
+			Name:       "indexed",
+			RelPath:    "indexed",
+			DocFile:    "index.md",
+			Types:      map[string][]string{"struct Page": nil},
+			Files:      []string{"indexed.go"},
+		},
+		{
 			ImportPath: "example.com/sample/internal/secret",
 			Name:       "secret",
 			RelPath:    "internal/secret",
@@ -131,6 +148,14 @@ func TestLoad_WithFixtureModule_ReturnsModule(t *testing.T) {
 			Summary:    "Package secret holds internal types.",
 			Types:      map[string][]string{"struct Token": nil},
 			Files:      []string{"secret.go"},
+		},
+		{
+			ImportPath: "example.com/sample/readme",
+			Name:       "readme",
+			RelPath:    "readme",
+			DocFile:    "README.md",
+			Types:      map[string][]string{"struct Note": nil},
+			Files:      []string{"readme.go"},
 		},
 		{
 			ImportPath: "example.com/sample/shapes",
@@ -158,6 +183,33 @@ func TestLoad_WithFixtureModule_ReturnsModule(t *testing.T) {
 	}
 	if got, want := summarize(mod.Packages), want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
 		t.Errorf("Load(...) packages mismatch (-want +got):\n%s", cmp.Diff(want, got))
+	}
+	if got, want := mod.DocFile, (*model.DocFile)(nil); !cmp.Equal(got, want) {
+		t.Errorf("Load(...) DocFile = %v, want nil", got)
+	}
+}
+
+func TestLoad_WithBareModule_AttachesRootDocFile(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	ctx := context.Background()
+	dir := testdataDir(t, "bare")
+	cfg := loader.Config{Dir: dir, Patterns: []string{"./..."}}
+	want := &model.DocFile{
+		Path: filepath.Join(dir, "README.md"),
+		Text: "# Bare\n\nModule bare has no package in its root directory.\n\nSee [lib](lib) and [its source](lib/lib.go).\n",
+	}
+
+	// Act
+	mod, err := loader.Load(ctx, cfg)
+
+	// Assert
+	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Load(...) = %v, want nil", got)
+	}
+	if got, want := mod.DocFile, want; !cmp.Equal(got, want) {
+		t.Errorf("Load(...) DocFile mismatch (-want +got):\n%s", cmp.Diff(want, got))
 	}
 }
 
