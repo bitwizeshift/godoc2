@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 
-	cli "github.com/bitwizeshift/go-cli"
+	"github.com/bitwizeshift/go-cli"
 
 	"github.com/bitwizeshift/godoc2/internal/generate"
 	"github.com/bitwizeshift/godoc2/internal/loader"

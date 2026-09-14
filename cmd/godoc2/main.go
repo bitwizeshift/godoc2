@@ -4,7 +4,7 @@ package main
 import (
 	_ "embed"
 
-	cli "github.com/bitwizeshift/go-cli"
+	"github.com/bitwizeshift/go-cli"
 
 	"github.com/bitwizeshift/godoc2/internal/app"
 )
