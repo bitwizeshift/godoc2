@@ -93,6 +93,11 @@ func (r *run) execute(ctx context.Context) error {
 		}
 	}
 
+	r.reporter.Stage("Copying linked files")
+	if err := r.assets(); err != nil {
+		return r.fail("Copying linked files", err)
+	}
+
 	r.reporter.Stage("Writing search index")
 	if err := r.write(pathmap.Static(search.FileName), r.search.Write); err != nil {
 		return r.fail("Writing search index", err)
@@ -126,6 +131,25 @@ func (r *run) staticFiles() error {
 		return err
 	}
 	return r.write(pathmap.Static(render.JSFile), r.renderer.JS)
+}
+
+// assets copies every file that a Markdown documentation file links to.
+func (r *run) assets() error {
+	for _, a := range r.docfiles.Assets() {
+		src, err := os.Open(a.Source)
+		if err != nil {
+			return err
+		}
+		err = r.write(a.Output, func(w io.Writer) error {
+			_, err := io.Copy(w, src)
+			return err
+		})
+		_ = src.Close()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // modulePage writes the module page, which is also the page of the root

@@ -98,6 +98,8 @@ func TestGenerator_Generate_WithFixture_WritesEveryPage(t *testing.T) {
 		"example.com/sample/internal/secret/index.html",
 		"example.com/sample/internal/secret/secret.go.html",
 		"example.com/sample/readme/Note.html",
+		"example.com/sample/readme/docs/diagram.svg",
+		"example.com/sample/readme/docs/guide.md",
 		"example.com/sample/readme/index.html",
 		"example.com/sample/readme/readme.go.html",
 		"example.com/sample/sample.go.html",
@@ -125,12 +127,14 @@ func TestGenerator_Generate_WithFixture_WritesEveryPage(t *testing.T) {
 		"Writing package example.com/sample/internal/secret",
 		"Writing package example.com/sample/readme",
 		"Writing package example.com/sample/shapes",
+		"Copying linked files",
 		"Writing search index",
 	}
 
 	// Act
 	err := sut.Generate(ctx)
 	index, _ := sink.Content("static/search-index.js")
+	guide, _ := sink.Content("example.com/sample/readme/docs/guide.md")
 
 	// Assert
 	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -147,6 +151,9 @@ func TestGenerator_Generate_WithFixture_WritesEveryPage(t *testing.T) {
 	}
 	if got, want := strings.Contains(index, `{"name":"Circle.Area","kind":"method","package":"example.com/sample","path":"example.com/sample/Circle.Area.html"}`), true; !cmp.Equal(got, want) {
 		t.Errorf("Generator.Generate(...) search index has method entry = %v, want %v", got, want)
+	}
+	if got, want := guide, "# Guide\n\nThe guide is copied next to the page.\n"; !cmp.Equal(got, want) {
+		t.Errorf("Generator.Generate(...) copied file mismatch (-want +got):\n%s", cmp.Diff(want, got))
 	}
 }
 
