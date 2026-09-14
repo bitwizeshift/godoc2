@@ -30,7 +30,7 @@
     {{- else}}
     <ul>
       {{- range .Items}}
-      <li><a href="{{.Href}}">{{.Text}}</a>{{if .Internal}} <span class="badge badge-internal">internal</span>{{end}}</li>
+      <li><a href="{{.Href}}">{{.Text}}</a>{{template "marks" .}}</li>
       {{- end}}
     </ul>
     {{- end}}
@@ -79,7 +79,7 @@
   <section id="search-results" hidden></section>
   <section id="content">
     <div class="main-heading">
-      <h1><span class="kind">{{.Heading.Kind}}</span> {{.Heading.Name}}{{if .Heading.Internal}} <span class="badge badge-internal">internal</span>{{end}}</h1>
+      <h1><span class="kind">{{.Heading.Kind}}</span> {{.Heading.Name}}{{template "marks" .Heading}}</h1>
       {{- if .SourceHref}}<a class="src" href="{{.SourceHref}}">source</a>{{end}}
     </div>
     {{- if .Definition}}
@@ -99,7 +99,7 @@
       <table class="item-table">
         {{- range .Rows}}
         <tr>
-          <td><a href="{{.Href}}">{{.Name}}</a>{{if .Internal}} <span class="badge badge-internal">internal</span>{{end}}</td>
+          <td><a href="{{.Href}}">{{.Name}}</a>{{template "marks" .}}</td>
           <td class="summary">{{.Summary}}</td>
         </tr>
         {{- end}}
@@ -159,12 +159,13 @@
   {{- end}}
 </ul>
 {{end}}
-{{define "treelabel"}}{{if .Href}}<a href="{{.Href}}">{{.Text}}</a>{{else}}<span class="dir">{{.Text}}</span>{{end}}{{if .Internal}} <span class="badge badge-internal">internal</span>{{end}}{{end}}
+{{define "treelabel"}}{{if .Href}}<a href="{{.Href}}">{{.Text}}</a>{{else}}<span class="dir">{{.Text}}</span>{{end}}{{template "marks" .}}{{end}}
+{{define "marks"}}{{if .Internal}} <span class="badge badge-internal">internal</span>{{end}}{{if .Deprecated}} <span class="badge badge-deprecated" title="{{.Deprecated}}">deprecated</span>{{end}}{{end}}
 {{define "item"}}
 <details class="item" id="{{.ID}}" open>
   <summary>
     <div class="item-code">{{.Code}}</div>
-    <div class="item-links">{{if .Receiver}}<span class="badge badge-receiver" title="implemented by {{.Receiver}}"><code>{{.Receiver}}</code></span> {{end}}{{if .Internal}}<span class="badge badge-internal">internal</span> {{end}}{{if .SourceHref}}<a class="src" href="{{.SourceHref}}">source</a>{{end}}</div>
+    <div class="item-links">{{if .Receiver}}<span class="badge badge-receiver" title="implemented by {{.Receiver}}"><code>{{.Receiver}}</code></span> {{end}}{{if .Internal}}<span class="badge badge-internal">internal</span> {{end}}{{if .Deprecated}}<span class="badge badge-deprecated" title="{{.Deprecated}}">deprecated</span> {{end}}{{if .SourceHref}}<a class="src" href="{{.SourceHref}}">source</a>{{end}}</div>
   </summary>
   {{- if .Summary}}
   <div class="item-doc">

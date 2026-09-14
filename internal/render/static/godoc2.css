@@ -13,6 +13,9 @@
   --color-badge-internal: #fdf1dc;
   --color-badge-internal-text: #7a4b00;
   --color-badge-internal-border: #e3c78e;
+  --color-badge-deprecated: #fbe4e4;
+  --color-badge-deprecated-text: #8b1d1d;
+  --color-badge-deprecated-border: #e9aaaa;
   --color-sidebar: #f7f9fa;
   --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-code: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
@@ -32,6 +35,9 @@
   --color-badge-internal: #2a2308;
   --color-badge-internal-text: #f0b72f;
   --color-badge-internal-border: #6b5615;
+  --color-badge-deprecated: #2e0f0f;
+  --color-badge-deprecated-text: #f07575;
+  --color-badge-deprecated-border: #7a2a2a;
   --color-sidebar: #1a1c1e;
 }
 
@@ -50,6 +56,9 @@
     --color-badge-internal: #2a2308;
     --color-badge-internal-text: #f0b72f;
     --color-badge-internal-border: #6b5615;
+    --color-badge-deprecated: #2e0f0f;
+    --color-badge-deprecated-text: #f07575;
+    --color-badge-deprecated-border: #7a2a2a;
     --color-sidebar: #1a1c1e;
   }
 }
@@ -216,12 +225,20 @@ kbd {
 }
 a.badge:hover { text-decoration: none; background: var(--color-accent); color: #fff; }
 
+.badge-internal, .badge-deprecated {
+  padding: 0.05em 0.6em;
+  margin-left: 0.4em;
+}
 .badge-internal {
   background: var(--color-badge-internal);
   color: var(--color-badge-internal-text);
   border: 1px solid var(--color-badge-internal-border);
-  padding: 0.05em 0.6em;
-  margin-left: 0.4em;
+}
+.badge-deprecated {
+  background: var(--color-badge-deprecated);
+  color: var(--color-badge-deprecated-text);
+  border: 1px solid var(--color-badge-deprecated-border);
+  cursor: help;
 }
 
 .badge-receiver code { font-size: 0.8rem; }

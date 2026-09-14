@@ -55,7 +55,7 @@ func (b *builder) moduleDoc(root *model.Package) *markdown.Document {
 func (b *builder) packagePage(p *model.Package) *page {
 	pg := b.newPage(p.ImportPath)
 	pg.Breadcrumb = b.breadcrumb(p)
-	pg.Heading = heading{Kind: "package", Name: p.DisplayName(), Internal: p.Internal()}
+	pg.Heading = heading{Kind: "package", Name: p.DisplayName(), Internal: p.Internal(), Deprecated: p.Deprecated()}
 	if p.Tool() {
 		pg.Heading.Kind = "binary"
 	}
@@ -126,8 +126,9 @@ func (b *builder) packageRow(p *model.Package, name string) tableRow {
 	return tableRow{
 		Name:     name,
 		Href:     b.rel(pathmap.Package(b.r.module.Path, p.RelPath)),
-		Internal: p.Internal(),
-		Summary:  summary,
+		Internal:   p.Internal(),
+		Deprecated: p.Deprecated(),
+		Summary:    summary,
 	}
 }
 
@@ -143,7 +144,7 @@ func (b *builder) withPackage(p *model.Package) *builder {
 func (b *builder) typePage(t *model.Type) *page {
 	pg := b.newPage(t.Pkg.ImportPath + "." + t.Name)
 	pg.Breadcrumb = b.breadcrumb(t.Pkg, crumb{Text: t.Name, Href: ""})
-	pg.Heading = heading{Kind: t.Kind.String(), Name: t.Name, Internal: t.Pkg.Internal()}
+	pg.Heading = heading{Kind: t.Kind.String(), Name: t.Name, Internal: t.Pkg.Internal(), Deprecated: t.Deprecated()}
 	pg.SourceHref = b.sourceHref(t.Spec)
 	pg.Definition = b.code(b.printer("").Type(t))
 
@@ -194,7 +195,7 @@ func (b *builder) funcPage(f *model.Func) *page {
 	symbols = append(symbols, crumb{Text: f.Name})
 	pg := b.newPage(title)
 	pg.Breadcrumb = b.breadcrumb(f.Pkg, symbols...)
-	pg.Heading = heading{Kind: "func", Name: f.Name, Internal: f.Pkg.Internal()}
+	pg.Heading = heading{Kind: "func", Name: f.Name, Internal: f.Pkg.Internal(), Deprecated: f.Deprecated()}
 	pg.SourceHref = b.sourceHref(f.Decl)
 	pg.Definition = b.code(b.printer("").Func(f))
 	b.addDocAndExamples(pg, f.Doc, f.Examples)
@@ -205,7 +206,7 @@ func (b *builder) funcPage(f *model.Func) *page {
 func (b *builder) valuePage(v *model.Value) *page {
 	pg := b.newPage(v.Pkg.ImportPath + "." + v.Name)
 	pg.Breadcrumb = b.breadcrumb(v.Pkg, crumb{Text: v.Name})
-	pg.Heading = heading{Kind: v.Kind.String(), Name: v.Name, Internal: v.Pkg.Internal()}
+	pg.Heading = heading{Kind: v.Kind.String(), Name: v.Name, Internal: v.Pkg.Internal(), Deprecated: v.Deprecated()}
 	if v.Spec != nil {
 		pg.SourceHref = b.sourceHref(v.Spec)
 	}
@@ -266,6 +267,7 @@ func packageTree(root *treeNode, rows []tableRow) []*treeNode {
 		}
 		node.Href = row.Href
 		node.Internal = row.Internal
+		node.Deprecated = row.Deprecated
 	}
 	return []*treeNode{root}
 }
@@ -290,6 +292,7 @@ func (b *builder) treeSidebar(s *section, p *model.Package) *sidebarSection {
 		root.Text = p.DisplayName()
 		root.Href = b.rel(pathmap.Package(b.r.module.Path, p.RelPath))
 		root.Internal = p.Internal()
+		root.Deprecated = p.Deprecated()
 	}
 	return &sidebarSection{Title: s.Title, Tree: packageTree(root, s.Rows)}
 }

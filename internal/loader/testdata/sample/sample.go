@@ -147,3 +147,9 @@ func Configure(radius float64, color Color, name string, writer io.Writer, extra
 }
 
 func unexported() {}
+
+// Legacy is the version before [Version] existed.
+//
+// Deprecated: Use [Version] instead. Legacy is kept only so that old
+// callers still compile.
+const Legacy = "0.9"

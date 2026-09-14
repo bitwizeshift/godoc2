@@ -20,6 +20,7 @@ func (b *builder) typeItem(t *model.Type) item {
 		SourceHref: b.sourceHref(t.Spec),
 		Summary:    summary,
 		Full:       full,
+		Deprecated: t.Deprecated(),
 	}
 }
 
@@ -36,6 +37,7 @@ func (b *builder) funcItem(prefix string, f *model.Func) item {
 		SourceHref: b.sourceHref(f.Decl),
 		Summary:    summary,
 		Full:       full,
+		Deprecated: f.Deprecated(),
 	}
 }
 
@@ -55,6 +57,7 @@ func (b *builder) valueItem(prefix string, v *model.Value) item {
 		SourceHref: b.sourceHref(pos),
 		Summary:    summary,
 		Full:       full,
+		Deprecated: v.Deprecated(),
 	}
 }
 
@@ -145,5 +148,6 @@ func (b *builder) implItem(prefix string, impl relate.Impl, receiver string) ite
 	it.SourceHref = local.sourceHref(impl.Local.Spec)
 	it.Summary, it.Full = local.summaryAndFull(local.doc(impl.Local.Doc))
 	it.Internal = impl.Local.Pkg.Internal()
+	it.Deprecated = impl.Local.Deprecated()
 	return it
 }

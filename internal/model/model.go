@@ -121,6 +121,12 @@ func (p *Package) Summary() string {
 	return FirstParagraph(p.Doc)
 }
 
+// Deprecated returns the deprecation message of the package, or an empty
+// string when the package is not deprecated.
+func (p *Package) Deprecated() string {
+	return Deprecation(p.Doc)
+}
+
 // TypeKind classifies a [Type] by its underlying declaration.
 type TypeKind int
 
@@ -169,6 +175,12 @@ func (t *Type) Summary() string {
 	return FirstParagraph(t.Doc)
 }
 
+// Deprecated returns the deprecation message of the type, or an empty
+// string when it is not deprecated.
+func (t *Type) Deprecated() string {
+	return Deprecation(t.Doc)
+}
+
 // Func is an exported function or method.
 type Func struct {
 	Name string
@@ -188,6 +200,12 @@ type Func struct {
 // Summary returns the first paragraph of the function documentation.
 func (f *Func) Summary() string {
 	return FirstParagraph(f.Doc)
+}
+
+// Deprecated returns the deprecation message of the func, or an empty
+// string when it is not deprecated.
+func (f *Func) Deprecated() string {
+	return Deprecation(f.Doc)
 }
 
 // ValueKind distinguishes constants from variables.
@@ -227,6 +245,12 @@ func (v *Value) Summary() string {
 	return FirstParagraph(v.Doc)
 }
 
+// Deprecated returns the deprecation message of the value, or an empty
+// string when it is not deprecated.
+func (v *Value) Deprecated() string {
+	return Deprecation(v.Doc)
+}
+
 // Example is a runnable example from a _test.go file.
 type Example struct {
 	// Name is the full example name, such as "ExampleFoo_bar".
@@ -258,4 +282,22 @@ type File struct {
 func FirstParagraph(doc string) string {
 	first, _, _ := strings.Cut(strings.TrimSpace(doc), "\n\n")
 	return first
+}
+
+// deprecatedPrefix starts the paragraph that marks a deprecation, as the Go
+// tools recognise it.
+const deprecatedPrefix = "Deprecated: "
+
+// Deprecation returns the deprecation message of doc: the text of the first
+// paragraph that starts with "Deprecated: ", without the prefix and with its
+// lines joined by spaces. It returns an empty string when doc has no such
+// paragraph.
+func Deprecation(doc string) string {
+	for para := range strings.SplitSeq(strings.TrimSpace(doc), "\n\n") {
+		para = strings.TrimSpace(para)
+		if msg, ok := strings.CutPrefix(para, deprecatedPrefix); ok {
+			return strings.Join(strings.Fields(msg), " ")
+		}
+	}
+	return ""
 }

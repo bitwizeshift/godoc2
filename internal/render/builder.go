@@ -224,10 +224,10 @@ func sidebarOf(s *section) *sidebarSection {
 	}
 	entry := &sidebarSection{Title: s.Title}
 	for _, it := range s.Items {
-		entry.Items = append(entry.Items, sidebarItem{Text: it.Name, Href: "#" + it.ID, Internal: it.Internal})
+		entry.Items = append(entry.Items, sidebarItem{Text: it.Name, Href: "#" + it.ID, Internal: it.Internal, Deprecated: it.Deprecated})
 	}
 	for _, row := range s.Rows {
-		entry.Items = append(entry.Items, sidebarItem{Text: row.Name, Href: row.Href, Internal: row.Internal})
+		entry.Items = append(entry.Items, sidebarItem{Text: row.Name, Href: row.Href, Internal: row.Internal, Deprecated: row.Deprecated})
 	}
 	for _, ex := range s.Examples {
 		entry.Items = append(entry.Items, sidebarItem{Text: ex.Title, Href: "#" + ex.ID})

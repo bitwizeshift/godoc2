@@ -47,23 +47,29 @@ type sidebarSection struct {
 // treeNode is one node of the sidebar package tree. A node without an Href
 // is a directory that holds no package.
 type treeNode struct {
-	Text     string
-	Href     string
-	Internal bool
-	Open     bool
-	Children []*treeNode
+	Text       string
+	Href       string
+	Internal   bool
+	Deprecated string
+	Open       bool
+	Children   []*treeNode
 }
 
+// sidebarItem is one link of a sidebar section. Deprecated holds the
+// deprecation message of a deprecated target, shown when the badge is
+// hovered.
 type sidebarItem struct {
-	Text     string
-	Href     string
-	Internal bool
+	Text       string
+	Href       string
+	Internal   bool
+	Deprecated string
 }
 
 type heading struct {
-	Kind     string
-	Name     string
-	Internal bool
+	Kind       string
+	Name       string
+	Internal   bool
+	Deprecated string
 }
 
 // Section kinds.
@@ -94,10 +100,11 @@ type section struct {
 }
 
 type tableRow struct {
-	Name     string
-	Href     string
-	Internal bool
-	Summary  template.HTML
+	Name       string
+	Href       string
+	Internal   bool
+	Deprecated string
+	Summary    template.HTML
 }
 
 // item is one code-referencing entry.
@@ -110,6 +117,7 @@ type item struct {
 	Summary    template.HTML
 	Full       template.HTML
 	Internal   bool
+	Deprecated string
 
 	// Receiver is the form of the implementing type, T or *T, for relation
 	// entries.

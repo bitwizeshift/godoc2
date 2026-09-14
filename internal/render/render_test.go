@@ -70,6 +70,9 @@ func TestRenderer_Module(t *testing.T) {
 		`<td><a href="cmd/tool/index.html">tool</a></td>`,
 		`<td><a href="internal/secret/index.html">internal/secret</a> <span class="badge badge-internal">internal</span></td>`,
 		`<td><a href="shapes/index.html">shapes</a></td>`,
+		`<td><a href="empty/index.html">empty</a> <span class="badge badge-deprecated" title="Nothing lives here.">deprecated</span></td>`,
+		`<li><a href="#const.Legacy">Legacy</a> <span class="badge badge-deprecated" title="Use [Version] instead. Legacy is kept only so that old callers still compile.">deprecated</span></li>`,
+		`<span class="badge badge-deprecated" title="Use [Version] instead. Legacy is kept only so that old callers still compile.">deprecated</span> <a class="src" href="sample.go.html#L155">source</a>`,
 		`<td><a href="readme/index.html">readme</a></td>`,
 		`<td class="summary"><p>Package readme is documented by its README file.</p>`,
 		`<td class="summary"><p>Package indexed is documented by index.md.</p>`,
@@ -145,7 +148,7 @@ func TestRenderer_Package(t *testing.T) {
 			pkg:          loadertest.Package(t, "empty"),
 			wantSections: []string{"documentation"},
 			wantFragments: fragments{
-				`<h1><span class="kind">package</span> empty</h1>`,
+				`<h1><span class="kind">package</span> empty <span class="badge badge-deprecated" title="Nothing lives here.">deprecated</span></h1>`,
 				`<p class="message" id="empty">This package has no exported identifiers.</p>`,
 				`<span class="sep">/</span><a href="index.html">empty</a>`,
 			},

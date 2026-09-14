@@ -97,7 +97,7 @@ func TestLoad_WithFixtureModule_ReturnsModule(t *testing.T) {
 			Name:       "sample",
 			RelPath:    "",
 			Summary:    "Package sample is a fixture module for godoc2 tests.",
-			Consts:     []string{"Blue", "Green", "Red", "Version"},
+			Consts:     []string{"Blue", "Green", "Legacy", "Red", "Version"},
 			Vars:       []string{"DefaultColor", "ErrNegative"},
 			Types: map[string][]string{
 				"struct Big":      nil,

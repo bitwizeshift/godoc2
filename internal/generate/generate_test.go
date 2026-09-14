@@ -74,6 +74,7 @@ func TestGenerator_Generate_WithFixture_WritesEveryPage(t *testing.T) {
 		"example.com/sample/Green.html",
 		"example.com/sample/Grid.html",
 		"example.com/sample/ID.html",
+		"example.com/sample/Legacy.html",
 		"example.com/sample/Named.html",
 		"example.com/sample/NewCircle.html",
 		"example.com/sample/Red.html",
