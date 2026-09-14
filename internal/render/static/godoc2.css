@@ -321,7 +321,7 @@ details.item > summary {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
-  cursor: pointer;
+  cursor: default;
   position: relative;
 }
 details.item > summary::-webkit-details-marker { display: none; }
@@ -332,8 +332,10 @@ details.item > summary::before {
   color: var(--color-text-subtle);
   margin: 0.9rem 0 0 0.5rem;
   flex: 0 0 auto;
+  cursor: pointer;
 }
 details.item[open] > summary::before { content: "[−]"; }
+details.item > summary a { cursor: pointer; }
 .item-code { flex: 1 1 auto; min-width: 0; }
 .item-code pre.chroma { background: var(--color-background-accented); }
 .item-links { flex: 0 0 auto; padding: 0.75rem 0.5rem 0 0; display: flex; gap: 0.5rem; align-items: center; }
