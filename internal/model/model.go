@@ -350,6 +350,14 @@ type Value struct {
 	Pkg *Package
 }
 
+// SentinelError reports whether the value is a variable of type error.
+func (v *Value) SentinelError() bool {
+	if v.Kind != KindVar || v.Obj == nil {
+		return false
+	}
+	return types.Identical(v.Obj.Type(), types.Universe.Lookup("error").Type())
+}
+
 // Summary returns the first paragraph of the value documentation.
 func (v *Value) Summary() string {
 	return FirstParagraph(v.Doc)

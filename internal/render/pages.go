@@ -107,22 +107,39 @@ func (b *builder) packagePage(p *model.Package) *page {
 	return pg
 }
 
-// addPackageMembers appends the Examples, Constants, Variables, Types, and
-// Functions sections of p, or the no-exported-identifiers message when the
-// package declares nothing and has no tables.
+// addPackageMembers appends the Examples, Constants, Sentinel Errors,
+// Variables, Types, and Functions sections of p, or the
+// no-exported-identifiers message when the package declares nothing and has
+// no tables. The Sentinel Errors section holds the variables of type error,
+// and the Variables section holds the other variables.
 func (b *builder) addPackageMembers(pg *page, p *model.Package, hasTables bool) {
+	errs, others := splitSentinelErrors(p.Vars)
 	examples := b.examplesSection(p.Examples)
 	consts := itemsSection("constants", "Constants", b.valueItems("const", p.Consts))
-	vars := itemsSection("variables", "Variables", b.valueItems("var", p.Vars))
+	sentinels := itemsSection("errors", "Sentinel Errors", b.valueItems("var", errs))
+	vars := itemsSection("variables", "Variables", b.valueItems("var", others))
 	types := itemsSection("types", "Types", b.typeItems(p.Types))
 	funcs := itemsSection("functions", "Functions", b.funcItems("func", p.Funcs))
-	for _, s := range []*section{examples, consts, vars, types, funcs} {
+	for _, s := range []*section{examples, consts, sentinels, vars, types, funcs} {
 		pg.Sections = appendSection(pg.Sections, s)
 		pg.Sidebar = appendSidebar(pg.Sidebar, sidebarOf(s))
 	}
-	if consts == nil && vars == nil && types == nil && funcs == nil && !hasTables {
+	if consts == nil && sentinels == nil && vars == nil && types == nil && funcs == nil && !hasTables {
 		pg.Sections = append(pg.Sections, section{ID: "empty", Kind: kindMessage, Message: noExportedMessage})
 	}
+}
+
+// splitSentinelErrors divides vars into the variables of type error and the
+// rest, each in the given order.
+func splitSentinelErrors(vars []*model.Value) (errs, others []*model.Value) {
+	for _, v := range vars {
+		if v.SentinelError() {
+			errs = append(errs, v)
+		} else {
+			others = append(others, v)
+		}
+	}
+	return errs, others
 }
 
 // toolsSection lists the main packages of mod.

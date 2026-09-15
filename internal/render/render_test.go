@@ -63,9 +63,17 @@ func TestRenderer_Module(t *testing.T) {
 	sut := newRenderer(t)
 	mod := loadertest.SampleModule(t)
 	var out strings.Builder
-	wantSections := []string{"documentation", "tools", "packages", "examples", "constants", "variables", "types", "functions"}
+	wantSections := []string{"documentation", "tools", "packages", "examples", "constants", "errors", "variables", "types", "functions"}
 	wantFragments := fragments{
 		`<h1><span class="kind">package</span> sample</h1>`,
+		`<h3>Sentinel Errors</h3>
+    <ul>
+      <li><a href="#var.ErrNegative">ErrNegative</a></li>
+    </ul>`,
+		`<h3>Variables</h3>
+    <ul>
+      <li><a href="#var.DefaultColor">DefaultColor</a></li>
+    </ul>`,
 		`<a class="badge badge-module" href="index.html" title="example.com/sample">module</a>`,
 		`<td><a href="cmd/tool/index.html">tool</a></td>`,
 		`<td><a href="internal/secret/index.html">internal/secret</a> <span class="badge badge-internal" title="Importable only by packages rooted at the parent of the internal directory.">internal</span></td>`,
