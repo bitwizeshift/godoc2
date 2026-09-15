@@ -320,6 +320,7 @@ pre.chroma, .definition pre {
 pre.chroma a { color: inherit; text-decoration: underline; text-decoration-color: var(--color-border); text-underline-offset: 0.2em; }
 pre.chroma a:hover { color: var(--color-brand); text-decoration-color: var(--color-brand); }
 .definition { margin: 0 0 1.5rem; }
+.definition pre { padding-left: 0; }
 
 /* Code blocks in a page have no background. The highlighter theme sets one
    on .chroma from a dark-theme selector with three class-level parts, so the
@@ -352,11 +353,12 @@ pre.chroma a:hover { color: var(--color-brand); text-decoration-color: var(--col
 
 details.item { margin: 0 0 0.75rem; border-left: 3px solid var(--color-border-light); }
 details.item[open] { border-left-color: var(--color-accent); }
+/* The marker box is as wide as the left padding of the item doc, so that the
+   code in the summary starts on the same column as the doc below it. */
 details.item > summary {
   list-style: none;
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
   cursor: default;
   position: relative;
 }
@@ -367,13 +369,15 @@ details.item > summary::before {
   font-size: 0.75rem;
   color: var(--color-text-subtle);
   margin: 0.9rem 0 0 0.5rem;
+  width: 1.75rem;
   flex: 0 0 auto;
   cursor: pointer;
 }
 details.item[open] > summary::before { content: "[−]"; }
 details.item > summary a { cursor: pointer; }
 .item-code { flex: 1 1 auto; min-width: 0; }
-.item-links { flex: 0 0 auto; padding: 0.75rem 0.5rem 0 0; display: flex; gap: 0.5rem; align-items: center; }
+.item-code pre.chroma { padding-left: 0; }
+.item-links { flex: 0 0 auto; padding: 0.75rem 0.5rem 0 1rem; display: flex; gap: 0.5rem; align-items: center; }
 .item-doc { padding: 0.5rem 1rem 0.25rem 2.25rem; }
 .item-doc .docblock p:first-child { margin-top: 0; }
 .read-more {
