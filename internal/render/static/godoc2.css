@@ -325,7 +325,8 @@ pre.chroma a:hover { color: var(--color-brand); text-decoration-color: var(--col
    id gives this rule priority over it. */
 #main .definition pre.chroma,
 #main .item-code pre.chroma,
-#main .docblock pre.chroma { background: none; }
+#main .docblock pre.chroma,
+#main .example-code pre.chroma { background: none; }
 
 .docblock pre {
   padding: 0.75rem 1rem;
@@ -373,8 +374,7 @@ details.item > summary a { cursor: pointer; }
 .item-code { flex: 1 1 auto; min-width: 0; }
 .item-links { flex: 0 0 auto; padding: 0.75rem 0.5rem 0 0; display: flex; gap: 0.5rem; align-items: center; }
 .item-doc { padding: 0.5rem 1rem 0.25rem 2.25rem; }
-.item-doc .summary p:first-child { margin-top: 0; }
-.item-doc .full p:first-child { margin-top: 0; }
+.item-doc .docblock p:first-child { margin-top: 0; }
 .read-more {
   border: none;
   background: none;
@@ -388,11 +388,10 @@ details.item > summary a { cursor: pointer; }
 
 /* Examples */
 
-details.example { margin: 0 0 0.75rem; border: 1px solid var(--color-border-light); border-radius: 6px; }
-details.example > summary { padding: 0.5rem 0.75rem; cursor: pointer; font-weight: 600; }
-details.example > .docblock, details.example > .example-code, details.example > p, details.example > pre { margin: 0.5rem 0.75rem; }
-.example-output-label { margin: 0.5rem 0.75rem 0.25rem; font-weight: 600; font-size: 0.9rem; }
-.example-output { padding: 0.5rem 0.75rem; background: var(--color-background-accented); border-radius: 6px; }
+.example-title { margin: 0.75rem 0; font-size: 1rem; font-weight: 600; }
+.example-code pre.chroma { padding: 0.5rem 0; }
+.example-output-label { margin: 0.75rem 0 0.25rem; font-weight: 600; font-size: 0.9rem; }
+.example-output { margin: 0; padding: 0.5rem 0; line-height: 1.45; tab-size: 4; }
 
 /* Source */
 

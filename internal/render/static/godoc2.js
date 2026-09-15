@@ -126,7 +126,7 @@
   var toggleAll = byID("toggle-all");
 
   function collapsibles() {
-    return document.querySelectorAll("details.item, details.example, details.group");
+    return document.querySelectorAll("details.item, details.group");
   }
 
   function anyOpen() {

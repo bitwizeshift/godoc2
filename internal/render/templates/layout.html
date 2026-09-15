@@ -112,14 +112,16 @@
       </ul>
       {{- else if eq .Kind "examples"}}
       {{- range .Examples}}
-      <details class="example" id="{{.ID}}">
-        <summary>{{.Title}}</summary>
-        {{- if .Doc}}<div class="docblock">{{.Doc}}</div>{{end}}
-        <div class="example-code">{{.Code}}</div>
-        {{- if .Output}}
-        <p class="example-output-label">Output:</p>
-        <pre class="example-output">{{.Output}}</pre>
-        {{- end}}
+      <details class="item" id="{{.ID}}" open>
+        <summary><h3 class="example-title">{{.Title}}</h3></summary>
+        <div class="item-doc">
+          {{- if .Doc}}<div class="docblock">{{.Doc}}</div>{{end}}
+          <div class="example-code">{{.Code}}</div>
+          {{- if .Output}}
+          <p class="example-output-label">Output:</p>
+          <pre class="example-output">{{.Output}}</pre>
+          {{- end}}
+        </div>
       </details>
       {{- end}}
       {{- else if eq .Kind "items"}}

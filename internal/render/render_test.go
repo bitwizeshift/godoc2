@@ -389,7 +389,10 @@ func TestRenderer_Type(t *testing.T) {
         <summary><h3 class="relation-path">example.com/sample/shapes</h3></summary>
 <details class="item" id="implements.example.com/sample/shapes.Sizer" open>`,
 				`<a href="shapes/Sizer.html"><span class="nx">Sizer</span></a>`,
-				`<details class="example" id="example-Circle">`,
+				`<details class="item" id="example-Circle" open>
+        <summary><h3 class="example-title">Example</h3></summary>`,
+				`<p class="example-output-label">Output:</p>
+          <pre class="example-output">circle`,
 			},
 		},
 		{
@@ -501,7 +504,7 @@ func TestRenderer_Func(t *testing.T) {
 				`<h1><span class="kind">func</span> NewCircle</h1>`,
 				`<span class="sep">.</span><span class="crumb">NewCircle</span>`,
 				`<a class="src" href="sample.go.html#L55">source</a>`,
-				`<details class="example" id="example-NewCircle">`,
+				`<details class="item" id="example-NewCircle" open>`,
 				`<pre class="example-output">circle
 </pre>`,
 			},
