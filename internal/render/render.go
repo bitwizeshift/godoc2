@@ -12,6 +12,7 @@ import (
 	"github.com/bitwizeshift/godoc2/internal/markdown"
 	"github.com/bitwizeshift/godoc2/internal/model"
 	"github.com/bitwizeshift/godoc2/internal/pathmap"
+	"github.com/bitwizeshift/godoc2/internal/props"
 	"github.com/bitwizeshift/godoc2/internal/relate"
 )
 
@@ -45,7 +46,8 @@ type Renderer struct {
 // documentation files. It returns an error if the embedded templates do not
 // parse.
 func New(site *model.Site, resolver *link.Resolver, index *relate.Index, docfiles *docfile.Resolver) (*Renderer, error) {
-	tmpl, err := template.ParseFS(templateFS, "templates/*.html")
+	funcs := template.FuncMap{"badgeTitle": props.Title}
+	tmpl, err := template.New("").Funcs(funcs).ParseFS(templateFS, "templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("render: %w", err)
 	}

@@ -17,6 +17,23 @@ type Badge struct {
 	Value string
 }
 
+// titles is the hover text of every badge label.
+var titles = map[string]string{
+	"size":        "Size in bytes on a 64-bit system.",
+	"align":       "Alignment in bytes on a 64-bit system.",
+	"large":       "Size is above " + strconv.Itoa(LargeThreshold) + " bytes. Construct and pass by pointer to avoid large copies.",
+	"comparable":  "Values can be compared with == and !=, and can be map keys.",
+	"sealed":      "Interface with an unexported method. Only types in the same package can implement it.",
+	"noncopiable": "Must not be copied. It holds data that requires object identity, such as a lock.",
+	"internal":    "Importable only by packages rooted at the parent of the internal directory.",
+}
+
+// Title returns the hover text that explains the badge with label. It returns
+// an empty string for a label that has no badge.
+func Title(label string) string {
+	return titles[label]
+}
+
 var sizes = types.SizesFor("gc", "amd64")
 
 // Badges returns the properties of t in display order: size, alignment,

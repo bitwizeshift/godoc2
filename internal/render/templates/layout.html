@@ -107,7 +107,7 @@
       {{- else if eq .Kind "badges"}}
       <ul class="badges">
         {{- range .Badges}}
-        <li class="badge badge-prop{{if eq .Label "internal"}} badge-internal{{end}}"><span class="badge-label">{{.Label}}</span>{{if .Value}} <span class="badge-value">{{.Value}}</span>{{end}}</li>
+        <li class="badge badge-prop{{if eq .Label "internal"}} badge-internal{{end}}"{{with badgeTitle .Label}} title="{{.}}"{{end}}><span class="badge-label">{{.Label}}</span>{{if .Value}} <span class="badge-value">{{.Value}}</span>{{end}}</li>
         {{- end}}
       </ul>
       {{- else if eq .Kind "examples"}}
@@ -160,12 +160,12 @@
 </ul>
 {{end}}
 {{define "treelabel"}}{{if .Href}}<a href="{{.Href}}">{{.Text}}</a>{{else}}<span class="dir">{{.Text}}</span>{{end}}{{template "marks" .}}{{end}}
-{{define "marks"}}{{if .Internal}} <span class="badge badge-internal">internal</span>{{end}}{{if .Deprecated}} <span class="badge badge-deprecated" title="{{.Deprecated}}">deprecated</span>{{end}}{{end}}
+{{define "marks"}}{{if .Internal}} <span class="badge badge-internal" title="{{badgeTitle "internal"}}">internal</span>{{end}}{{if .Deprecated}} <span class="badge badge-deprecated" title="{{.Deprecated}}">deprecated</span>{{end}}{{end}}
 {{define "item"}}
 <details class="item" id="{{.ID}}" open>
   <summary>
     <div class="item-code">{{.Code}}</div>
-    <div class="item-links">{{if .Receiver}}<span class="badge badge-receiver" title="implemented by {{.Receiver}}"><code>{{.Receiver}}</code></span> {{end}}{{if .Internal}}<span class="badge badge-internal">internal</span> {{end}}{{if .Deprecated}}<span class="badge badge-deprecated" title="{{.Deprecated}}">deprecated</span> {{end}}{{if .SourceHref}}<a class="src" href="{{.SourceHref}}">source</a>{{end}}</div>
+    <div class="item-links">{{if .Receiver}}<span class="badge badge-receiver" title="implemented by {{.Receiver}}"><code>{{.Receiver}}</code></span> {{end}}{{if .Internal}}<span class="badge badge-internal" title="{{badgeTitle "internal"}}">internal</span> {{end}}{{if .Deprecated}}<span class="badge badge-deprecated" title="{{.Deprecated}}">deprecated</span> {{end}}{{if .SourceHref}}<a class="src" href="{{.SourceHref}}">source</a>{{end}}</div>
   </summary>
   {{- if .Summary}}
   <div class="item-doc">

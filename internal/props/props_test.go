@@ -117,3 +117,48 @@ func TestBadges(t *testing.T) {
 		})
 	}
 }
+
+func TestTitle(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		label string
+		want  string
+	}{
+		{
+			name:  "size",
+			label: "size",
+			want:  "Size in bytes on a 64-bit system.",
+		},
+		{
+			name:  "large names the threshold",
+			label: "large",
+			want:  "Size is above 80 bytes. Construct and pass by pointer to avoid large copies.",
+		},
+		{
+			name:  "internal",
+			label: "internal",
+			want:  "Importable only by packages rooted at the parent of the internal directory.",
+		},
+		{
+			name:  "unknown label",
+			label: "deprecated",
+			want:  "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Act
+			title := props.Title(tc.label)
+
+			// Assert
+			if got, want := title, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("Title(%q) = %q, want %q", tc.label, got, want)
+			}
+		})
+	}
+}

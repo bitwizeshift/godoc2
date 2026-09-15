@@ -68,7 +68,7 @@ func TestRenderer_Module(t *testing.T) {
 		`<h1><span class="kind">package</span> sample</h1>`,
 		`<a class="badge badge-module" href="index.html">module</a>`,
 		`<td><a href="cmd/tool/index.html">tool</a></td>`,
-		`<td><a href="internal/secret/index.html">internal/secret</a> <span class="badge badge-internal">internal</span></td>`,
+		`<td><a href="internal/secret/index.html">internal/secret</a> <span class="badge badge-internal" title="Importable only by packages rooted at the parent of the internal directory.">internal</span></td>`,
 		`<td><a href="shapes/index.html">shapes</a></td>`,
 		`<td><a href="empty/index.html">empty</a> <span class="badge badge-deprecated" title="Nothing lives here.">deprecated</span></td>`,
 		`<li><a href="#const.Legacy">Legacy</a> <span class="badge badge-deprecated" title="Use [Version] instead. Legacy is kept only so that old callers still compile.">deprecated</span></li>`,
@@ -275,7 +275,7 @@ func TestRenderer_Package(t *testing.T) {
 			pkg:          loadertest.Package(t, "internal/secret"),
 			wantSections: []string{"documentation", "types"},
 			wantFragments: fragments{
-				`<h1><span class="kind">package</span> secret <span class="badge badge-internal">internal</span></h1>`,
+				`<h1><span class="kind">package</span> secret <span class="badge badge-internal" title="Importable only by packages rooted at the parent of the internal directory.">internal</span></h1>`,
 				`<span class="sep">/</span><span class="crumb">internal</span><span class="sep">/</span><a href="index.html">secret</a>`,
 			},
 		},
@@ -371,7 +371,8 @@ func TestRenderer_Type(t *testing.T) {
 				`<h1><span class="kind">struct</span> Circle</h1>`,
 				`<a class="src" href="sample.go.html#L44">source</a>`,
 				`// contains unexported fields`,
-				`<span class="badge-label">size</span> <span class="badge-value">24 bytes</span>`,
+				`<li class="badge badge-prop" title="Size in bytes on a 64-bit system."><span class="badge-label">size</span> <span class="badge-value">24 bytes</span></li>`,
+				`<li class="badge badge-prop" title="Values can be compared with == and !=, and can be map keys."><span class="badge-label">comparable</span></li>`,
 				`<details class="item" id="ctor.NewCircle" open>`,
 				`<summary><h3 class="relation-path">example.com/sample/shapes</h3></summary>
 <details class="item" id="ctor.NewUnit" open>`,
@@ -429,7 +430,7 @@ func TestRenderer_Type(t *testing.T) {
 			typ:          loadertest.Type(t, "internal/secret", "Token"),
 			wantSections: []string{"documentation", "properties"},
 			wantFragments: fragments{
-				`<h1><span class="kind">struct</span> Token <span class="badge badge-internal">internal</span></h1>`,
+				`<h1><span class="kind">struct</span> Token <span class="badge badge-internal" title="Importable only by packages rooted at the parent of the internal directory.">internal</span></h1>`,
 				`<span class="badge-label">internal</span>`,
 			},
 		},

@@ -233,6 +233,7 @@ a.badge:hover { text-decoration: none; background: var(--color-accent); color: #
   background: var(--color-badge-internal);
   color: var(--color-badge-internal-text);
   border: 1px solid var(--color-badge-internal-border);
+  cursor: help;
 }
 .badge-deprecated {
   background: var(--color-badge-deprecated);
@@ -244,7 +245,7 @@ a.badge:hover { text-decoration: none; background: var(--color-accent); color: #
 .badge-receiver code { font-size: 0.8rem; }
 
 .badges { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.badge-prop { font-size: 0.85rem; padding: 0.15em 0.7em; }
+.badge-prop { font-size: 0.85rem; padding: 0.15em 0.7em; cursor: help; }
 .badges .badge-internal { margin-left: 0; }
 .badge-value { font-weight: 400; }
 
