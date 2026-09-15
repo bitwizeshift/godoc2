@@ -129,10 +129,11 @@ type FuncGroup struct {
 }
 
 // Constructors returns the functions of the site whose first result is t
-// or a pointer to t, grouped by package. The group of the package of t comes
-// first with an empty path, then the groups of the other packages of its
-// module, then the groups of the other modules, each run in import path
-// order.
+// or a pointer to t, grouped by package. For an interface t, the functions
+// whose first result is a concrete type that satisfies t are included. The
+// group of the package of t comes first with an empty path, then the groups
+// of the other packages of its module, then the groups of the other modules,
+// each run in import path order.
 func (idx *Index) Constructors(t *model.Type) []FuncGroup {
 	return idx.funcGroups(t, func(f *model.Func) bool {
 		return isConstructor(f, t.Obj)
@@ -308,14 +309,26 @@ func isInterface(tn *types.TypeName) bool {
 	return ok
 }
 
-// isConstructor reports whether the first result of f is target or a
-// pointer to it.
+// isConstructor reports whether the first result of f is target, a pointer
+// to it, or a concrete type that satisfies the interface target.
 func isConstructor(f *model.Func, target *types.TypeName) bool {
 	sig, ok := f.Obj.Type().(*types.Signature)
 	if !ok || sig.Results().Len() == 0 {
 		return false
 	}
-	return sameType(sig.Results().At(0).Type(), target)
+	result := sig.Results().At(0).Type()
+	return sameType(result, target) || satisfies(result, target)
+}
+
+// satisfies reports whether the concrete type typ implements the non-empty
+// interface target. typ is checked as written: a value type does not satisfy
+// an interface that only its pointer type implements.
+func satisfies(typ types.Type, target *types.TypeName) bool {
+	iface, ok := types.Unalias(target.Type()).Underlying().(*types.Interface)
+	if !ok || iface.NumMethods() == 0 || types.IsInterface(typ) {
+		return false
+	}
+	return types.Implements(typ, iface)
 }
 
 // takesParam reports whether any parameter of f is target or a pointer to

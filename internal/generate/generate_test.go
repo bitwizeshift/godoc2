@@ -87,6 +87,7 @@ func TestGenerator_Generate_WithFixture_WritesEveryPage(t *testing.T) {
 		"example.com/sample/Stack.Push.html",
 		"example.com/sample/Stack.html",
 		"example.com/sample/Version.html",
+		"example.com/sample/ZeroCircle.html",
 		"example.com/sample/cmd/tool/index.html",
 		"example.com/sample/cmd/tool/main.go.html",
 		"example.com/sample/doc.go.html",

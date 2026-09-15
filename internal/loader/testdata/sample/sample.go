@@ -174,3 +174,8 @@ type Label struct {
 
 	hidden bool
 }
+
+// ZeroCircle returns a circle with radius 0 by value.
+func ZeroCircle() Circle {
+	return Circle{}
+}

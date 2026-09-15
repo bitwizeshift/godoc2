@@ -112,6 +112,14 @@ func TestIndex_Constructors(t *testing.T) {
 			name: "same package first then other packages",
 			typ:  loadertest.Type(t, "", "Circle"),
 			want: []funcGroupSummary{
+				{Path: "", Funcs: []string{"Configure", "NewCircle", "ZeroCircle"}},
+				{Path: "example.com/sample/shapes", Funcs: []string{"NewUnit"}},
+			},
+		},
+		{
+			name: "interface includes functions that return an implementation",
+			typ:  loadertest.Type(t, "", "Named"),
+			want: []funcGroupSummary{
 				{Path: "", Funcs: []string{"Configure", "NewCircle"}},
 				{Path: "example.com/sample/shapes", Funcs: []string{"NewUnit"}},
 			},

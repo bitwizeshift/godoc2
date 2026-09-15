@@ -150,7 +150,7 @@ func TestLoad_WithFixtureModule_ReturnsModule(t *testing.T) {
 				"struct Square":   {"Name", "String"},
 				"struct Stack":    {"Pop", "Push"},
 			},
-			Funcs:    []string{"Configure", "Describe", "NewCircle"},
+			Funcs:    []string{"Configure", "Describe", "NewCircle", "ZeroCircle"},
 			Examples: []string{""},
 			Files:    []string{"doc.go", "sample.go", "sample_test.go"},
 		},

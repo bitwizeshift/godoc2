@@ -422,9 +422,11 @@ func TestRenderer_Type(t *testing.T) {
 		{
 			name:         "interface",
 			typ:          loadertest.Type(t, "", "Named"),
-			wantSections: []string{"documentation", "properties", "implementations"},
+			wantSections: []string{"documentation", "properties", "constructors", "implementations"},
 			wantFragments: fragments{
 				`<h1><span class="kind">interface</span> Named</h1>`,
+				`<details class="item" id="ctor.NewCircle" open>`,
+				`<details class="item" id="ctor.NewUnit" open>`,
 				`<li><a href="#implementations.example.com/sample.Circle">Circle</a></li>`,
 				`<span class="badge badge-receiver" title="implemented by *Circle"><code>*Circle</code></span>`,
 				`<span class="badge badge-receiver" title="implemented by Square"><code>Square</code></span>`,
@@ -437,7 +439,7 @@ func TestRenderer_Type(t *testing.T) {
 		{
 			name:         "sealed interface",
 			typ:          loadertest.Type(t, "", "Shape"),
-			wantSections: []string{"documentation", "properties", "implementations"},
+			wantSections: []string{"documentation", "properties", "constructors", "implementations"},
 			wantFragments: fragments{
 				`<span class="badge-label">sealed</span>`,
 				`// contains unexported methods`,
