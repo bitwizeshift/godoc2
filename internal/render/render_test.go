@@ -421,6 +421,7 @@ func TestRenderer_Type(t *testing.T) {
 			typ:          loadertest.Type(t, "", "Color"),
 			wantSections: []string{"documentation", "properties", "instances", "utilities"},
 			wantFragments: fragments{
+				`<li class="badge badge-prop" title="Values can be compared with &lt;, &lt;=, &gt;, and &gt;=."><span class="badge-label">ordered</span></li>`,
 				`<details class="item" id="instance.Red" open>`,
 				`<details class="item" id="instance.DefaultColor" open>`,
 			},

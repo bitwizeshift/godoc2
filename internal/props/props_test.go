@@ -89,6 +89,17 @@ func TestBadges(t *testing.T) {
 				{Label: "size", Value: "16 bytes"},
 				{Label: "align", Value: "8"},
 				{Label: "comparable"},
+				{Label: "ordered"},
+			},
+		},
+		{
+			name: "integer enum",
+			typ:  loadertest.Type(t, "", "Color"),
+			want: []props.Badge{
+				{Label: "size", Value: "8 bytes"},
+				{Label: "align", Value: "8"},
+				{Label: "comparable"},
+				{Label: "ordered"},
 			},
 		},
 		{

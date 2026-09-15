@@ -23,6 +23,7 @@ var titles = map[string]string{
 	"align":       "Alignment in bytes on a 64-bit system.",
 	"large":       "Size is above " + strconv.Itoa(LargeThreshold) + " bytes. Construct and pass by pointer to avoid large copies.",
 	"comparable":  "Values can be compared with == and !=, and can be map keys.",
+	"ordered":     "Values can be compared with <, <=, >, and >=.",
 	"sealed":      "Interface with an unexported method. Only types in the same package can implement it.",
 	"noncopiable": "Must not be copied. It holds data that requires object identity, such as a lock.",
 	"internal":    "Importable only by packages rooted at the parent of the internal directory.",
@@ -37,7 +38,7 @@ func Title(label string) string {
 var sizes = types.SizesFor("gc", "amd64")
 
 // Badges returns the properties of t in display order: size, alignment,
-// large, comparable, sealed, noncopiable, and internal.
+// large, comparable, ordered, sealed, noncopiable, and internal.
 func Badges(t *model.Type) []Badge {
 	if t.Obj == nil {
 		return nil
@@ -55,6 +56,9 @@ func Badges(t *model.Type) []Badge {
 	}
 	if types.Comparable(typ) {
 		badges = append(badges, Badge{Label: "comparable"})
+	}
+	if ordered(typ) {
+		badges = append(badges, Badge{Label: "ordered"})
 	}
 	if sealed(typ) {
 		badges = append(badges, Badge{Label: "sealed"})
@@ -126,6 +130,13 @@ func noncopiable(typ types.Type, seen map[types.Type]bool) bool {
 		}
 	}
 	return false
+}
+
+// ordered reports whether typ supports the <, <=, >, and >= operators: its
+// underlying type is an integer, a float, or a string.
+func ordered(typ types.Type) bool {
+	basic, ok := typ.Underlying().(*types.Basic)
+	return ok && basic.Info()&types.IsOrdered != 0
 }
 
 // sealed reports whether typ is an interface with an unexported method.
