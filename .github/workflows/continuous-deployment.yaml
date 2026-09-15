@@ -4,17 +4,26 @@ on:
   workflow_call:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
+  attestations: write
 
 jobs:
   deploy-docs:
     name: Deploy Docs
     uses: ./.github/workflows/godoc-deploy.yaml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
 
   go-release:
     name: Release godoc2
     uses: ./.github/workflows/go-release.yaml
     with:
       version: snapshot
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write

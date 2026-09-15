@@ -24,6 +24,7 @@ jobs:
     needs: continuous-integration
     uses: ./.github/workflows/continuous-deployment.yaml
     permissions:
-      contents: read
+      contents: write
       pages: write
       id-token: write
+      attestations: write
