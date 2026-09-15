@@ -2,6 +2,7 @@ package highlight
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"html"
 	"html/template"
@@ -47,10 +48,33 @@ func New() *Highlighter {
 	}
 }
 
+// ErrUnknownLanguage reports a language name that chroma has no lexer for.
+var ErrUnknownLanguage = errors.New("unknown language")
+
 // Code renders a declaration as a highlighted <pre> block. Every link span is
 // wrapped in an anchor. It returns any error from the lexer.
 func (h *Highlighter) Code(r sig.Rendered) (template.HTML, error) {
-	tokens, err := h.lexer.Tokenise(nil, r.Text)
+	return h.render(h.lexer, r)
+}
+
+// Snippet renders a code fragment without links.
+func (h *Highlighter) Snippet(code string) (template.HTML, error) {
+	return h.Code(sig.Rendered{Text: code})
+}
+
+// Fence renders code written in the language named lang as a highlighted
+// <pre> block. It returns [ErrUnknownLanguage] when chroma has no lexer for
+// lang, and any error from the lexer.
+func (h *Highlighter) Fence(lang, code string) (template.HTML, error) {
+	lexer := lexers.Get(lang)
+	if lexer == nil {
+		return "", fmt.Errorf("highlight: %w %q", ErrUnknownLanguage, lang)
+	}
+	return h.render(chroma.Coalesce(lexer), sig.Rendered{Text: code})
+}
+
+func (h *Highlighter) render(lexer chroma.Lexer, r sig.Rendered) (template.HTML, error) {
+	tokens, err := lexer.Tokenise(nil, r.Text)
 	if err != nil {
 		return "", err
 	}
@@ -63,11 +87,6 @@ func (h *Highlighter) Code(r sig.Rendered) (template.HTML, error) {
 	}
 	b.WriteString("</code></pre>")
 	return template.HTML(b.String()), nil
-}
-
-// Snippet renders a code fragment without links.
-func (h *Highlighter) Snippet(code string) (template.HTML, error) {
-	return h.Code(sig.Rendered{Text: code})
 }
 
 // writeToken writes one token, splitting it where a link span starts or

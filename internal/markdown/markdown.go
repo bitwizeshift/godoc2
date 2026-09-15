@@ -22,8 +22,11 @@ type Renderer struct {
 	unsafe   html.Renderer
 }
 
-// New returns a [Renderer] configured for Go doc comments.
-func New() *Renderer {
+// New returns a [Renderer] configured for Go doc comments. Code blocks that
+// name a language render through h. A nil h renders every code block as
+// plain text.
+func New(h Highlighter) *Renderer {
+	fences := html.WithNodeRendererDecorator(ast.KindCodeBlock, fenceDecorator(h))
 	return &Renderer{
 		parser: parser.New(
 			parser.WithAutoHeadingID(),
@@ -35,10 +38,12 @@ func New() *Renderer {
 		),
 		html: html.New(
 			html.WithExtensions(extension.GFMHTMLRenderer, doclink.HTMLRenderer),
+			fences,
 		),
 		unsafe: html.New(
 			html.WithExtensions(extension.GFMHTMLRenderer),
 			html.WithUnsafe(),
+			fences,
 		),
 	}
 }

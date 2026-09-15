@@ -87,6 +87,57 @@ func TestHighlighter_Code(t *testing.T) {
 	}
 }
 
+func TestHighlighter_Fence(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		lang    string
+		code    string
+		want    template.HTML
+		wantErr error
+	}{
+		{
+			name: "go",
+			lang: "go",
+			code: "type ID = string",
+			want: `<pre class="chroma"><code><span class="kd">type</span> <span class="nx">ID</span> <span class="p">=</span> <span class="kt">string</span></code></pre>`,
+		},
+		{
+			name: "json",
+			lang: "json",
+			code: `{"a": 1}`,
+			want: `<pre class="chroma"><code><span class="p">{</span><span class="nt">&#34;a&#34;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span></code></pre>`,
+		},
+		{
+			name:    "unknown language",
+			lang:    "no-such-language",
+			code:    "x",
+			wantErr: highlight.ErrUnknownLanguage,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			sut := highlight.New()
+
+			// Act
+			out, err := sut.Fence(tc.lang, tc.code)
+
+			// Assert
+			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+				t.Fatalf("Highlighter.Fence(...) = %v, want %v", got, want)
+			}
+			if got, want := out, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("Highlighter.Fence(...) mismatch (-want +got):\n%s", cmp.Diff(want, got))
+			}
+		})
+	}
+}
+
 func TestHighlighter_Source_WritesLinkableLines(t *testing.T) {
 	t.Parallel()
 

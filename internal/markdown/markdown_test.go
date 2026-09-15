@@ -7,6 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
+	"github.com/bitwizeshift/godoc2/internal/highlight"
 	"github.com/bitwizeshift/godoc2/internal/markdown"
 	"github.com/bitwizeshift/godoc2/internal/markdown/doclink/doclinktest"
 )
@@ -48,6 +49,21 @@ func TestDocument_HTML(t *testing.T) {
 			want: "<p>Example:</p>\n<pre><code>c := New()\n</code></pre>\n",
 		},
 		{
+			name: "fenced code block without a language",
+			doc:  "```\nc := New()\n```\n",
+			want: "<pre><code>c := New()\n</code></pre>\n",
+		},
+		{
+			name: "fenced code block with a language",
+			doc:  "```go\nvar x int\n```\n",
+			want: `<pre class="chroma"><code><span class="kd">var</span> <span class="nx">x</span> <span class="kt">int</span>` + "\n</code></pre>\n",
+		},
+		{
+			name: "fenced code block with an unknown language",
+			doc:  "```no-such-language\nx\n```\n",
+			want: `<pre><code class="language-no-such-language">x` + "\n</code></pre>\n",
+		},
+		{
 			name: "gfm table",
 			doc:  "| a | b |\n|---|---|\n| 1 | 2 |\n",
 			want: "<table>\n<thead>\n<tr>\n<th>a</th>\n<th>b</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>1</td>\n<td>2</td>\n</tr>\n</tbody>\n</table>\n",
@@ -64,7 +80,7 @@ func TestDocument_HTML(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			sut := markdown.New().Parse(tc.doc, scope())
+			sut := markdown.New(highlight.New()).Parse(tc.doc, scope())
 
 			// Act
 			out, err := sut.HTML()
@@ -108,6 +124,11 @@ func TestRenderer_ParseMarkdown(t *testing.T) {
 			text: "Visit https://example.com now.",
 			want: `<p>Visit <a href="https://example.com">https://example.com</a> now.</p>` + "\n",
 		},
+		{
+			name: "fenced code block with a language",
+			text: "```go\nvar x int\n```\n",
+			want: `<pre class="chroma"><code><span class="kd">var</span> <span class="nx">x</span> <span class="kt">int</span>` + "\n</code></pre>\n",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -115,7 +136,7 @@ func TestRenderer_ParseMarkdown(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			sut := markdown.New().ParseMarkdown(tc.text)
+			sut := markdown.New(highlight.New()).ParseMarkdown(tc.text)
 
 			// Act
 			out, err := sut.HTML()
@@ -135,7 +156,7 @@ func TestDocument_RewriteLinks(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	sut := markdown.New().ParseMarkdown("[a](docs/a.md) and ![b](img/b.png \"B\") and [c](https://example.com).")
+	sut := markdown.New(highlight.New()).ParseMarkdown("[a](docs/a.md) and ![b](img/b.png \"B\") and [c](https://example.com).")
 	sut.RewriteLinks(func(dest string) string {
 		switch dest {
 		case "docs/a.md":
@@ -195,7 +216,7 @@ func TestDocument_Summary(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			sut := markdown.New().Parse(tc.doc, scope())
+			sut := markdown.New(highlight.New()).Parse(tc.doc, scope())
 
 			// Act
 			out, err := sut.Summary()
@@ -215,7 +236,7 @@ func TestDocument_Headings_ListsHeadingsInOrder(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	sut := markdown.New().Parse(sampleDoc, scope())
+	sut := markdown.New(highlight.New()).Parse(sampleDoc, scope())
 	want := []markdown.Heading{
 		{Level: 1, ID: "usage", Text: "Usage"},
 		{Level: 2, ID: "the-color-type", Text: "The Color type"},

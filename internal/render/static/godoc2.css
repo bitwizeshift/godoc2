@@ -320,11 +320,12 @@ pre.chroma a { color: inherit; text-decoration: underline; text-decoration-color
 pre.chroma a:hover { color: var(--color-brand); text-decoration-color: var(--color-brand); }
 .definition { margin: 0 0 1.5rem; }
 
-/* Declarations and item code have no background. The highlighter theme sets
-   one on .chroma from a dark-theme selector with three class-level parts, so
-   the id gives this rule priority over it. */
+/* Code blocks in a page have no background. The highlighter theme sets one
+   on .chroma from a dark-theme selector with three class-level parts, so the
+   id gives this rule priority over it. */
 #main .definition pre.chroma,
-#main .item-code pre.chroma { background: none; }
+#main .item-code pre.chroma,
+#main .docblock pre.chroma { background: none; }
 
 .docblock pre {
   padding: 0.75rem 1rem;

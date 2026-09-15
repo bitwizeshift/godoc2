@@ -51,13 +51,14 @@ func New(site *model.Site, resolver *link.Resolver, index *relate.Index, docfile
 	if err != nil {
 		return nil, fmt.Errorf("render: %w", err)
 	}
+	highlighter := highlight.New()
 	return &Renderer{
 		site:      site,
 		resolver:  resolver,
 		index:     index,
 		docfiles:  docfiles,
-		markdown:  markdown.New(),
-		highlight: highlight.New(),
+		markdown:  markdown.New(highlighter),
+		highlight: highlighter,
 		tmpl:      tmpl,
 	}, nil
 }
