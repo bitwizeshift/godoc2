@@ -231,6 +231,63 @@ func TestLoad_WithFixtureModule_ReturnsModule(t *testing.T) {
 	}
 }
 
+func TestLoad_WithUnexported_ListsUnexportedIdentifiersLast(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	ctx := context.Background()
+	cfg := loader.Config{Dir: fixtureDir(t), Patterns: []string{"."}, Unexported: true}
+	want := []packageSummary{
+		{
+			ImportPath: "example.com/sample",
+			Name:       "sample",
+			RelPath:    "",
+			Summary:    "Package sample is a fixture module for godoc2 tests.",
+			Consts:     []string{"Blue", "Green", "Legacy", "Red", "Version", "maxPoints"},
+			Vars:       []string{"DefaultColor", "ErrNegative", "origin"},
+			Types: map[string][]string{
+				"struct Big":      nil,
+				"struct Circle":   {"Area", "Name", "sealed"},
+				"type Color":      nil,
+				"struct Counter":  {"Add"},
+				"struct Grid":     nil,
+				"alias ID":        nil,
+				"struct Label":    nil,
+				"interface Named": nil,
+				"interface Shape": nil,
+				"struct Square":   {"Name", "String"},
+				"struct Stack":    {"Pop", "Push"},
+				"struct point":    {"Name", "shift"},
+			},
+			Funcs:    []string{"Configure", "Describe", "NewCircle", "ZeroCircle", "newPoint", "unexported"},
+			Examples: []string{""},
+			Files:    []string{"doc.go", "sample.go", "sample_test.go"},
+		},
+	}
+	wantFields := []fieldSummary{
+		{Name: "X", Doc: "X is the horizontal coordinate.\n", Obj: "field X int", Type: "point"},
+		{Name: "y", Doc: "y is the vertical coordinate.\n", Obj: "field y int", Type: "point"},
+	}
+
+	// Act
+	site, err := loader.Load(ctx, cfg)
+
+	// Assert
+	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Load(...) = %v, want nil", got)
+	}
+	if got, want := site.Unexported, true; !cmp.Equal(got, want) {
+		t.Errorf("Load(...) site.Unexported = %v, want %v", got, want)
+	}
+	if got, want := summarize(site.Modules[0].Packages), want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+		t.Errorf("Load(...) packages mismatch (-want +got):\n%s", cmp.Diff(want, got))
+	}
+	fields := summarizeFields(typeOf(t, site.Modules[0].Packages[0], "point").Fields)
+	if got, want := fields, wantFields; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+		t.Errorf("Load(...) fields mismatch (-want +got):\n%s", cmp.Diff(want, got))
+	}
+}
+
 func TestLoad_WithBareModule_AttachesRootDocFile(t *testing.T) {
 	t.Parallel()
 

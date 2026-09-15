@@ -20,6 +20,7 @@ func TestBuilder_RegistersArguments(t *testing.T) {
 	cl := argtest.NewCommandLine()
 	sut := app.NewBuilder()
 	wantFlags := []*argtest.Flag{
+		{Long: "include-unexported", Shorthand: "u", ValueLabel: "bool", Group: "Output Flags"},
 		{Long: "output", Shorthand: "o", ValueLabel: "dir", Group: "Output Flags"},
 		{Long: "verbose", Shorthand: "v", ValueLabel: "bool", Group: "Output Flags"},
 		{Long: "workspace", Shorthand: "w", ValueLabel: "file", Group: "Input Flags"},

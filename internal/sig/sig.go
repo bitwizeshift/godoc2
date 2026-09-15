@@ -41,6 +41,10 @@ type Printer struct {
 
 	// Self is the URL the declared name links to, or empty for no link.
 	Self string
+
+	// Unexported writes the unexported fields and methods of struct and
+	// interface declarations in place of the comment that stands for them.
+	Unexported bool
 }
 
 // Func renders a function or method signature.
@@ -381,15 +385,16 @@ func (w *writer) typeSpec(s *ast.TypeSpec) {
 	}
 }
 
-// structType writes the exported fields of a struct, one per line, and a
-// comment in place of the unexported fields. The [go/doc] filter removes the
-// unexported fields and marks the struct incomplete.
+// structType writes the visible fields of a struct, one per line, and a
+// comment in place of the hidden fields. The [go/doc] filter removes the
+// unexported fields and marks the struct incomplete when the loader excludes
+// them.
 func (w *writer) structType(t *ast.StructType) {
 	w.str("struct {")
 	var members []func()
 	hidden := t.Incomplete
 	for _, f := range fields(t.Fields) {
-		if !fieldExported(f) {
+		if !w.visible(f) {
 			hidden = true
 			continue
 		}
@@ -422,16 +427,16 @@ func (w *writer) tag(f *ast.Field) {
 	}
 }
 
-// interfaceType writes the exported methods and embedded types of an
-// interface, one per line, and a comment in place of the unexported methods.
-// The [go/doc] filter removes the unexported methods and marks the interface
-// incomplete.
+// interfaceType writes the visible methods and embedded types of an
+// interface, one per line, and a comment in place of the hidden methods. The
+// [go/doc] filter removes the unexported methods and marks the interface
+// incomplete when the loader excludes them.
 func (w *writer) interfaceType(t *ast.InterfaceType) {
 	w.str("interface {")
 	var members []func()
 	hidden := t.Incomplete
 	for _, f := range fields(t.Methods) {
-		if !fieldExported(f) {
+		if !w.visible(f) {
 			hidden = true
 			continue
 		}
@@ -478,6 +483,12 @@ func (w *writer) block(members []func(), hidden bool, comment string) {
 	w.indent--
 	w.newline()
 	w.str("}")
+}
+
+// visible reports whether a struct field or interface member is written: it
+// is exported, or the printer writes unexported members.
+func (w *writer) visible(f *ast.Field) bool {
+	return w.printer.Unexported || fieldExported(f)
 }
 
 // fieldExported reports whether a struct field or interface member is

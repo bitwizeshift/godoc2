@@ -1,6 +1,7 @@
 package link
 
 import (
+	"go/token"
 	"go/types"
 
 	"github.com/bitwizeshift/godoc2/internal/model"
@@ -54,17 +55,16 @@ func (r *Resolver) PackageNamed(name string) *model.Package {
 }
 
 // URL returns the href from the page at from to the documentation of obj.
-// It reports false for unexported objects, struct fields, and local
-// variables.
+// It reports false for struct fields, local variables, and objects that are
+// not documented: unexported objects outside the site, and unexported
+// objects inside the site when the site excludes them. A method is
+// documented only when its receiver type is.
 func (r *Resolver) URL(from string, obj types.Object) (string, bool) {
 	if obj == nil {
 		return "", false
 	}
 	if obj.Pkg() == nil {
 		return ExternalBase + "builtin#" + obj.Name(), true
-	}
-	if !obj.Exported() {
-		return "", false
 	}
 	recv := receiverName(obj)
 	if v, ok := obj.(*types.Var); ok && (v.IsField() || !isPackageLevel(obj)) {
@@ -73,10 +73,21 @@ func (r *Resolver) URL(from string, obj types.Object) (string, bool) {
 	if !isPackageLevel(obj) && recv == "" {
 		return "", false
 	}
-	if p, ok := r.packages[obj.Pkg().Path()]; ok {
+	p, local := r.packages[obj.Pkg().Path()]
+	if !r.documented(obj.Name(), local) || (recv != "" && !r.documented(recv, local)) {
+		return "", false
+	}
+	if local {
 		return r.local(from, p, recv, obj.Name()), true
 	}
 	return r.external(obj.Pkg().Path(), recv, obj.Name()), true
+}
+
+// documented reports whether a page exists for the identifier name: it is
+// exported, or it belongs to the site and the site includes unexported
+// identifiers.
+func (r *Resolver) documented(name string, local bool) bool {
+	return token.IsExported(name) || (local && r.site.Unexported)
 }
 
 // PackageURL returns the href from the page at from to the documentation of

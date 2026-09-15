@@ -57,7 +57,7 @@ func (b *builder) multiModule() bool {
 // printer returns a signature printer for the page. self is the URL the
 // declared name links to.
 func (b *builder) printer(self string) *sig.Printer {
-	return &sig.Printer{Resolver: b.r.resolver, Pkg: b.pkg, From: b.from, Self: self}
+	return &sig.Printer{Resolver: b.r.resolver, Pkg: b.pkg, From: b.from, Self: self, Unexported: b.r.site.Unexported}
 }
 
 // doc parses a doc comment in the scope of the page package. It returns nil
@@ -246,7 +246,7 @@ func sidebarOf(s *section) *sidebarSection {
 	}
 	entry := &sidebarSection{Title: s.Title}
 	for _, it := range s.Items {
-		entry.Items = append(entry.Items, sidebarItem{Text: it.Name, Href: "#" + it.ID, Internal: it.Internal, Deprecated: it.Deprecated})
+		entry.Items = append(entry.Items, sidebarItem{Text: it.Name, Href: "#" + it.ID, Internal: it.Internal, Unexported: it.Unexported, Deprecated: it.Deprecated})
 	}
 	for _, row := range s.Rows {
 		entry.Items = append(entry.Items, sidebarItem{Text: row.Name, Href: row.Href, Internal: row.Internal, Deprecated: row.Deprecated})
@@ -256,7 +256,7 @@ func sidebarOf(s *section) *sidebarSection {
 	}
 	for _, g := range s.Groups {
 		for _, it := range g.Items {
-			entry.Items = append(entry.Items, sidebarItem{Text: it.Name, Href: "#" + it.ID})
+			entry.Items = append(entry.Items, sidebarItem{Text: it.Name, Href: "#" + it.ID, Unexported: it.Unexported})
 		}
 	}
 	if len(entry.Items) == 0 {

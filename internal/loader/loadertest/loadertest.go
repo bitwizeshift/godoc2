@@ -27,17 +27,18 @@ const (
 
 // fixture loads one fixture site once per test binary.
 type fixture struct {
-	dir       string
-	workspace string
-	once      sync.Once
-	site      *model.Site
-	err       error
+	dir        string
+	workspace  string
+	unexported bool
+	once       sync.Once
+	site       *model.Site
+	err        error
 }
 
 func (f *fixture) load(t testing.TB) *model.Site {
 	t.Helper()
 	f.once.Do(func() {
-		cfg := loader.Config{Dir: f.dir, Workspace: f.workspace}
+		cfg := loader.Config{Dir: f.dir, Workspace: f.workspace, Unexported: f.unexported}
 		if f.workspace == "" {
 			cfg.Patterns = []string{"./..."}
 		}
@@ -50,9 +51,10 @@ func (f *fixture) load(t testing.TB) *model.Site {
 }
 
 var (
-	sample = &fixture{dir: fixtureDir("sample")}
-	bare   = &fixture{dir: fixtureDir("bare")}
-	multi  = &fixture{dir: fixtureDir("multi"), workspace: "go.work"}
+	sample     = &fixture{dir: fixtureDir("sample")}
+	unexported = &fixture{dir: fixtureDir("sample"), unexported: true}
+	bare       = &fixture{dir: fixtureDir("bare")}
+	multi      = &fixture{dir: fixtureDir("multi"), workspace: "go.work"}
 )
 
 // Sample returns the loaded fixture site, which holds the sample module. The
@@ -61,6 +63,42 @@ var (
 func Sample(t testing.TB) *model.Site {
 	t.Helper()
 	return sample.load(t)
+}
+
+// Unexported returns the sample fixture site loaded with its unexported
+// symbols. The site is loaded once per test binary and shared, so callers
+// must not modify it.
+func Unexported(t testing.TB) *model.Site {
+	t.Helper()
+	return unexported.load(t)
+}
+
+// UnexportedPackage returns the package at rel inside the sample module of
+// the site that holds unexported symbols. It fails the test when the package
+// does not exist.
+func UnexportedPackage(t testing.TB, rel string) *model.Package {
+	t.Helper()
+	for _, p := range Unexported(t).Modules[0].Packages {
+		if p.RelPath == rel {
+			return p
+		}
+	}
+	t.Fatalf("UnexportedPackage(%q): not found in fixture", rel)
+	return nil
+}
+
+// UnexportedType returns the named type from the package at rel of the site
+// that holds unexported symbols. It fails the test when the type does not
+// exist.
+func UnexportedType(t testing.TB, rel, name string) *model.Type {
+	t.Helper()
+	for _, typ := range UnexportedPackage(t, rel).Types {
+		if typ.Name == name {
+			return typ
+		}
+	}
+	t.Fatalf("UnexportedType(%q, %q): not found in fixture", rel, name)
+	return nil
 }
 
 // SampleModule returns the sample module of the fixture site.

@@ -86,6 +86,39 @@ func TestIndex_Instances(t *testing.T) {
 	}
 }
 
+func TestIndex_WithUnexported_ListsUnexportedEntriesLast(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	sut := relate.New(loadertest.Unexported(t))
+	named := loadertest.UnexportedType(t, "", "Named")
+	point := loadertest.UnexportedType(t, "", "point")
+	wantImpls := []groupSummary{
+		{Path: "", Names: []string{"Circle", "Square", "point"}},
+		{Path: "os", Names: []string{"File"}},
+	}
+	wantCtors := []funcGroupSummary{
+		{Path: "", Funcs: []string{"Configure", "NewCircle", "newPoint"}},
+		{Path: "example.com/sample/shapes", Funcs: []string{"NewUnit"}},
+	}
+
+	// Act
+	impls := relate.Groups(sut.Implementations(named), named)
+	ctors := sut.Constructors(named)
+	instances := sut.Instances(point)
+
+	// Assert
+	if got, want := summarizeGroups(impls), wantImpls; !cmp.Equal(got, want) {
+		t.Errorf("Index.Implementations(...) mismatch (-want +got):\n%s", cmp.Diff(want, got))
+	}
+	if got, want := summarizeFuncGroups(ctors), wantCtors; !cmp.Equal(got, want) {
+		t.Errorf("Index.Constructors(...) mismatch (-want +got):\n%s", cmp.Diff(want, got))
+	}
+	if got, want := valueNames(instances), []string{"origin"}; !cmp.Equal(got, want) {
+		t.Errorf("Index.Instances(...) = %v, want %v", got, want)
+	}
+}
+
 // funcGroupSummary is the comparable projection of a [relate.FuncGroup].
 type funcGroupSummary struct {
 	Path  string

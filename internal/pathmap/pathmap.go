@@ -1,6 +1,7 @@
 package pathmap
 
 import (
+	"go/token"
 	"path"
 	"strings"
 )
@@ -32,14 +33,27 @@ func PackageDir(modulePath, rel string) string {
 	return path.Join(modulePath, rel)
 }
 
+// UnexportedMark precedes an unexported name in a page path. The mark keeps
+// the page of an unexported name apart from the page of an exported name
+// that differs only in case, on file systems that ignore case.
+const UnexportedMark = "~"
+
 // Symbol returns the path of a type, function, constant, or variable page.
 func Symbol(modulePath, rel, name string) string {
-	return path.Join(modulePath, rel, name+".html")
+	return path.Join(modulePath, rel, elem(name)+".html")
 }
 
 // Method returns the path of a method page.
 func Method(modulePath, rel, typeName, name string) string {
-	return path.Join(modulePath, rel, typeName+"."+name+".html")
+	return path.Join(modulePath, rel, elem(typeName)+"."+elem(name)+".html")
+}
+
+// elem returns the path element of a symbol name.
+func elem(name string) string {
+	if token.IsExported(name) {
+		return name
+	}
+	return UnexportedMark + name
 }
 
 // Source returns the path of a rendered source file page.

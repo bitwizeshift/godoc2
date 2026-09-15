@@ -116,6 +116,83 @@ func TestResolver_URL(t *testing.T) {
 	}
 }
 
+func TestResolver_URL_WithUnexportedObject(t *testing.T) {
+	t.Parallel()
+
+	unexported := loadertest.Unexported(t)
+	point := loadertest.UnexportedType(t, "", "point")
+
+	testCases := []struct {
+		name   string
+		site   *model.Site
+		obj    types.Object
+		want   string
+		wantOK bool
+	}{
+		{
+			name:   "site without unexported symbols",
+			site:   loadertest.Sample(t),
+			obj:    loadertest.Package(t, "").TypesPkg.Scope().Lookup("point"),
+			want:   "",
+			wantOK: false,
+		},
+		{
+			name:   "unexported type",
+			site:   unexported,
+			obj:    point.Obj,
+			want:   "~point.html",
+			wantOK: true,
+		},
+		{
+			name:   "exported method of unexported type",
+			site:   unexported,
+			obj:    methodOf(t, point, "Name").Obj,
+			want:   "~point.Name.html",
+			wantOK: true,
+		},
+		{
+			name:   "unexported method of exported type",
+			site:   unexported,
+			obj:    methodOf(t, loadertest.UnexportedType(t, "", "Circle"), "sealed").Obj,
+			want:   "Circle.~sealed.html",
+			wantOK: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			sut := link.New(tc.site)
+
+			// Act
+			url, ok := sut.URL(rootIndex, tc.obj)
+
+			// Assert
+			if got, want := ok, tc.wantOK; !cmp.Equal(got, want) {
+				t.Fatalf("Resolver.URL(...) ok = %v, want %v", got, want)
+			}
+			if got, want := url, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("Resolver.URL(...) = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
+// methodOf returns the named method of typ. It fails the test when the
+// method does not exist.
+func methodOf(t testing.TB, typ *model.Type, name string) *model.Func {
+	t.Helper()
+	for _, m := range typ.Methods {
+		if m.Name == name {
+			return m
+		}
+	}
+	t.Fatalf("methodOf(%q, %q): not found", typ.Name, name)
+	return nil
+}
+
 func TestResolver_URL_WithThirdPartyObject_PinsVersion(t *testing.T) {
 	t.Parallel()
 

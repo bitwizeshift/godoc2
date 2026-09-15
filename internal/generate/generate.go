@@ -219,7 +219,7 @@ func (r *run) packagePages(p *model.Package) error {
 
 func (r *run) typePages(t *model.Type) error {
 	path := pathmap.Symbol(t.Pkg.Module.Path, t.Pkg.RelPath, t.Name)
-	r.search.Add(search.Entry{Name: t.Name, Kind: "type", Package: t.Pkg.ImportPath, Path: path})
+	r.search.Add(search.Entry{Name: t.Name, Kind: "type", Package: t.Pkg.ImportPath, Path: path, Unexported: !t.Exported()})
 	if err := r.write(path, func(w io.Writer) error {
 		return r.renderer.Type(w, t)
 	}); err != nil {
@@ -234,7 +234,7 @@ func (r *run) typePages(t *model.Type) error {
 }
 
 func (r *run) funcPage(f *model.Func) error {
-	entry := search.Entry{Name: f.Name, Kind: "func", Package: f.Pkg.ImportPath}
+	entry := search.Entry{Name: f.Name, Kind: "func", Package: f.Pkg.ImportPath, Unexported: !f.Exported()}
 	if f.Recv != nil {
 		entry.Name = f.Recv.Name + "." + f.Name
 		entry.Kind = "method"
@@ -250,7 +250,7 @@ func (r *run) funcPage(f *model.Func) error {
 
 func (r *run) valuePage(v *model.Value) error {
 	path := pathmap.Symbol(v.Pkg.Module.Path, v.Pkg.RelPath, v.Name)
-	r.search.Add(search.Entry{Name: v.Name, Kind: v.Kind.String(), Package: v.Pkg.ImportPath, Path: path})
+	r.search.Add(search.Entry{Name: v.Name, Kind: v.Kind.String(), Package: v.Pkg.ImportPath, Path: path, Unexported: !v.Exported()})
 	return r.write(path, func(w io.Writer) error {
 		return r.renderer.Value(w, v)
 	})

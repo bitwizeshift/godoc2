@@ -21,6 +21,10 @@ type Entry struct {
 
 	// Path is the page path relative to the output root.
 	Path string `json:"path"`
+
+	// Unexported marks a symbol that cannot be named outside its package.
+	// Such symbols rank after the exported ones with the same score.
+	Unexported bool `json:"unexported,omitempty"`
 }
 
 // Index accumulates entries.

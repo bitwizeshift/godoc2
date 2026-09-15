@@ -179,3 +179,35 @@ type Label struct {
 func ZeroCircle() Circle {
 	return Circle{}
 }
+
+// point is a position on the plane.
+type point struct {
+	// X is the horizontal coordinate.
+	X int
+
+	// y is the vertical coordinate.
+	y int
+}
+
+// Name returns the shape name.
+func (p *point) Name() string {
+	return "point"
+}
+
+// shift moves the point by dx.
+func (p *point) shift(dx int) {
+	p.X += dx
+}
+
+// newPoint returns the point at the origin.
+func newPoint() *point {
+	return &point{}
+}
+
+// origin is the point at zero.
+var origin = newPoint()
+
+// maxPoints is the largest number of points in a grid.
+const maxPoints = 8
+
+func init() {}

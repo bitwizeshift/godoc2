@@ -38,8 +38,9 @@ func (b *Builder) Build(ctx context.Context) (cli.Runner, error) {
 	return &Runner{
 		Generator: &generate.Generator{
 			Loader: loader.Config{
-				Patterns:  b.Patterns.Patterns(),
-				Workspace: b.Patterns.Workspace(),
+				Patterns:   b.Patterns.Patterns(),
+				Workspace:  b.Patterns.Workspace(),
+				Unexported: b.Output.Unexported(),
 			},
 			Sink:     b.Output.Sink(),
 			Reporter: b.Progress.Reporter(ctx),

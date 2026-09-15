@@ -182,7 +182,7 @@ func (b *builder) withPackage(p *model.Package) *builder {
 func (b *builder) typePage(t *model.Type) *page {
 	pg := b.newPage(t.Pkg.ImportPath+"."+t.Name, t.Pkg.Module)
 	pg.Breadcrumb = b.breadcrumb(t.Pkg.Module, t.Pkg, crumb{Text: t.Name, Href: ""})
-	pg.Heading = heading{Kind: t.Kind.String(), Name: t.Name, Internal: t.Pkg.Internal(), Deprecated: t.Deprecated()}
+	pg.Heading = heading{Kind: t.Kind.String(), Name: t.Name, Internal: t.Pkg.Internal(), Unexported: !t.Exported(), Deprecated: t.Deprecated()}
 	pg.SourceHref = b.sourceHref(t.Spec)
 	pg.Definition = b.code(b.printer("").Type(t))
 
@@ -234,7 +234,7 @@ func (b *builder) funcPage(f *model.Func) *page {
 	symbols = append(symbols, crumb{Text: f.Name})
 	pg := b.newPage(title, f.Pkg.Module)
 	pg.Breadcrumb = b.breadcrumb(f.Pkg.Module, f.Pkg, symbols...)
-	pg.Heading = heading{Kind: "func", Name: f.Name, Internal: f.Pkg.Internal(), Deprecated: f.Deprecated()}
+	pg.Heading = heading{Kind: "func", Name: f.Name, Internal: f.Pkg.Internal(), Unexported: !f.Exported(), Deprecated: f.Deprecated()}
 	pg.SourceHref = b.sourceHref(f.Decl)
 	pg.Definition = b.code(b.printer("").Func(f))
 	b.addDocAndExamples(pg, f.Doc, f.Examples)
@@ -245,7 +245,7 @@ func (b *builder) funcPage(f *model.Func) *page {
 func (b *builder) valuePage(v *model.Value) *page {
 	pg := b.newPage(v.Pkg.ImportPath+"."+v.Name, v.Pkg.Module)
 	pg.Breadcrumb = b.breadcrumb(v.Pkg.Module, v.Pkg, crumb{Text: v.Name})
-	pg.Heading = heading{Kind: v.Kind.String(), Name: v.Name, Internal: v.Pkg.Internal(), Deprecated: v.Deprecated()}
+	pg.Heading = heading{Kind: v.Kind.String(), Name: v.Name, Internal: v.Pkg.Internal(), Unexported: !v.Exported(), Deprecated: v.Deprecated()}
 	if v.Spec != nil {
 		pg.SourceHref = b.sourceHref(v.Spec)
 	}

@@ -162,12 +162,12 @@
 </ul>
 {{end}}
 {{define "treelabel"}}{{if .Href}}<a href="{{.Href}}">{{.Text}}</a>{{else}}<span class="dir">{{.Text}}</span>{{end}}{{template "marks" .}}{{end}}
-{{define "marks"}}{{if .Internal}} <span class="badge badge-internal" title="{{badgeTitle "internal"}}">internal</span>{{end}}{{if .Deprecated}} <span class="badge badge-deprecated" title="{{.Deprecated}}">deprecated</span>{{end}}{{end}}
+{{define "marks"}}{{if .Internal}} <span class="badge badge-internal" title="{{badgeTitle "internal"}}">internal</span>{{end}}{{if .Unexported}} <span class="badge badge-unexported" title="{{badgeTitle "unexported"}}">unexported</span>{{end}}{{if .Deprecated}} <span class="badge badge-deprecated" title="{{.Deprecated}}">deprecated</span>{{end}}{{end}}
 {{define "item"}}
 <details class="item" id="{{.ID}}" open>
   <summary>
     <div class="item-code">{{.Code}}</div>
-    <div class="item-links">{{if .Receiver}}<span class="badge badge-receiver" title="implemented by {{.Receiver}}"><code>{{.Receiver}}</code></span> {{end}}{{if .Embedded}}<span class="badge badge-embedded" title="{{badgeTitle "embedded"}}">embedded</span> {{end}}{{if .Internal}}<span class="badge badge-internal" title="{{badgeTitle "internal"}}">internal</span> {{end}}{{if .Deprecated}}<span class="badge badge-deprecated" title="{{.Deprecated}}">deprecated</span> {{end}}{{if .SourceHref}}<a class="src" href="{{.SourceHref}}">source</a>{{end}}</div>
+    <div class="item-links">{{if .Receiver}}<span class="badge badge-receiver" title="implemented by {{.Receiver}}"><code>{{.Receiver}}</code></span> {{end}}{{if .Embedded}}<span class="badge badge-embedded" title="{{badgeTitle "embedded"}}">embedded</span> {{end}}{{if .Internal}}<span class="badge badge-internal" title="{{badgeTitle "internal"}}">internal</span> {{end}}{{if .Unexported}}<span class="badge badge-unexported" title="{{badgeTitle "unexported"}}">unexported</span> {{end}}{{if .Deprecated}}<span class="badge badge-deprecated" title="{{.Deprecated}}">deprecated</span> {{end}}{{if .SourceHref}}<a class="src" href="{{.SourceHref}}">source</a>{{end}}</div>
   </summary>
   {{- if .Summary}}
   <div class="item-doc">

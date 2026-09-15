@@ -41,6 +41,11 @@ type Config struct {
 	// set, the go command runs in that workspace and every module the file
 	// uses is added to the patterns as "<dir>/...".
 	Workspace string
+
+	// Unexported includes the unexported identifiers of every package in the
+	// site, after the exported ones. The init and main functions are never
+	// included.
+	Unexported bool
 }
 
 // Load calls [Load] with the configuration.
@@ -87,7 +92,7 @@ func Load(ctx context.Context, cfg Config) (*model.Site, error) {
 		return nil, err
 	}
 
-	site := &model.Site{Dir: dir, Fset: fset, Deps: dependencies(pkgs)}
+	site := &model.Site{Dir: dir, Fset: fset, Deps: dependencies(pkgs), Unexported: cfg.Unexported}
 	for _, pkg := range pkgs {
 		if pkg.Module == nil {
 			continue
@@ -97,7 +102,7 @@ func Load(ctx context.Context, cfg Config) (*model.Site, error) {
 			mod = &model.Module{Path: pkg.Module.Path, Version: pkg.Module.Version, Dir: pkg.Module.Dir}
 			site.Modules = append(site.Modules, mod)
 		}
-		p, err := newPackage(fset, mod, pkg)
+		p, err := newPackage(fset, mod, pkg, cfg.Unexported)
 		if err != nil {
 			return nil, err
 		}
@@ -194,15 +199,20 @@ func dependencies(pkgs []*packages.Package) map[string]model.Dependency {
 	return deps
 }
 
-// newPackage builds the model of one loaded package.
-func newPackage(fset *token.FileSet, mod *model.Module, pkg *packages.Package) (*model.Package, error) {
+// newPackage builds the model of one loaded package. unexported includes
+// the unexported identifiers of the package.
+func newPackage(fset *token.FileSet, mod *model.Module, pkg *packages.Package, unexported bool) (*model.Package, error) {
 	dir := packageDir(pkg)
 	testFiles, err := parseTestFiles(fset, dir)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s: %w", ErrLoad, pkg.PkgPath, err)
 	}
 	files := slices.Concat(pkg.Syntax, testFiles)
-	dpkg, err := doc.NewFromFiles(fset, files, pkg.PkgPath)
+	var mode doc.Mode
+	if unexported {
+		mode = doc.AllDecls
+	}
+	dpkg, err := doc.NewFromFiles(fset, files, pkg.PkgPath, mode)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s: %w", ErrLoad, pkg.PkgPath, err)
 	}
@@ -224,7 +234,7 @@ func newPackage(fset *token.FileSet, mod *model.Module, pkg *packages.Package) (
 			return nil, fmt.Errorf("%w: %s: %w", ErrLoad, pkg.PkgPath, err)
 		}
 	}
-	c := &converter{fset: fset, pkg: p, scope: pkg.Types.Scope()}
+	c := &converter{fset: fset, pkg: p, scope: pkg.Types.Scope(), unexported: unexported}
 	p.Consts = c.values(dpkg.Consts, model.KindConst)
 	p.Vars = c.values(dpkg.Vars, model.KindVar)
 	p.Examples = c.examples(dpkg.Examples)
@@ -301,9 +311,11 @@ func parseTestFiles(fset *token.FileSet, dir string) ([]*ast.File, error) {
 	return files, nil
 }
 
+// sortByName orders items by name, with the exported names before the
+// unexported ones.
 func sortByName[T any](items []T, name func(T) string) {
 	slices.SortStableFunc(items, func(lhs, rhs T) int {
-		return strings.Compare(name(lhs), name(rhs))
+		return model.CompareNames(name(lhs), name(rhs))
 	})
 }
 
@@ -312,6 +324,19 @@ type converter struct {
 	fset  *token.FileSet
 	pkg   *model.Package
 	scope *types.Scope
+
+	// unexported includes the unexported identifiers.
+	unexported bool
+}
+
+// documented reports whether the identifier name is part of the model: it
+// is exported, or the converter includes unexported identifiers. The blank
+// identifier is never documented.
+func (c *converter) documented(name string) bool {
+	if name == "_" {
+		return false
+	}
+	return c.unexported || token.IsExported(name)
 }
 
 func (c *converter) values(vals []*doc.Value, kind model.ValueKind) []*model.Value {
@@ -323,7 +348,7 @@ func (c *converter) values(vals []*doc.Value, kind model.ValueKind) []*model.Val
 				continue
 			}
 			for _, name := range vs.Names {
-				if !name.IsExported() {
+				if !c.documented(name.Name) {
 					continue
 				}
 				result = append(result, &model.Value{
@@ -369,9 +394,7 @@ func (c *converter) typ(t *doc.Type) *model.Type {
 	return mt
 }
 
-// fields lists the exported fields of a struct type in declaration order.
-// The [go/doc] filter removes the unexported fields from the syntax before
-// this runs, but the check on the name is kept for embedded fields.
+// fields lists the documented fields of a struct type in declaration order.
 func (c *converter) fields(t *model.Type) []*model.Field {
 	if t.Spec == nil {
 		return nil
@@ -383,13 +406,13 @@ func (c *converter) fields(t *model.Type) []*model.Field {
 	var result []*model.Field
 	for _, f := range st.Fields.List {
 		if len(f.Names) == 0 {
-			if id := embeddedIdent(f.Type); id != nil && id.IsExported() {
+			if id := embeddedIdent(f.Type); id != nil && c.documented(id.Name) {
 				result = append(result, c.field(t, f, id, true))
 			}
 			continue
 		}
 		for _, name := range f.Names {
-			if name.IsExported() {
+			if c.documented(name.Name) {
 				result = append(result, c.field(t, f, name, false))
 			}
 		}
@@ -470,10 +493,15 @@ func typeKind(spec *ast.TypeSpec, obj *types.TypeName) model.TypeKind {
 	}
 }
 
+// funcs converts the functions or methods of one [go/doc] list. The init and
+// main functions are never converted: neither can be named by other code.
 func (c *converter) funcs(fns []*doc.Func, recv *model.Type) []*model.Func {
 	var result []*model.Func
 	for _, f := range fns {
-		if f.Decl == nil || !f.Decl.Name.IsExported() {
+		if f.Decl == nil || !c.documented(f.Name) {
+			continue
+		}
+		if recv == nil && (f.Name == "init" || f.Name == "main") {
 			continue
 		}
 		obj := c.funcObject(f, recv)

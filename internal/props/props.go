@@ -28,6 +28,7 @@ var titles = map[string]string{
 	"noncopiable": "Must not be copied. It holds data that requires object identity, such as a lock.",
 	"internal":    "Importable only by packages rooted at the parent of the internal directory.",
 	"embedded":    "Embedded in the struct. Its fields and methods are promoted to the struct.",
+	"unexported":  "Not exported. It cannot be named outside its package.",
 }
 
 // Title returns the hover text that explains the badge with label. It returns

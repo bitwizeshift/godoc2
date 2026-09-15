@@ -26,6 +26,10 @@ type Site struct {
 	// Deps maps the import path of every loaded dependency package to the
 	// module that provides it.
 	Deps map[string]Dependency
+
+	// Unexported reports whether the packages of the site hold their
+	// unexported symbols as well as the exported ones.
+	Unexported bool
 }
 
 // Module returns the module with the given path, or nil.
@@ -135,7 +139,10 @@ type Package struct {
 	// when the package has no doc comment.
 	DocFile *DocFile
 
-	// Consts, Vars, Types, and Funcs hold the exported identifiers.
+	// Consts, Vars, Types, and Funcs hold the documented identifiers: the
+	// exported ones, and the unexported ones as well when the site includes
+	// them. Each list holds the exported identifiers first, then the
+	// unexported ones, each run sorted by name.
 	Consts []*Value
 	Vars   []*Value
 	Types  []*Type
@@ -212,7 +219,7 @@ func (k TypeKind) String() string {
 	}
 }
 
-// Type is an exported type declaration.
+// Type is a type declaration.
 type Type struct {
 	Name string
 	Kind TypeKind
@@ -222,10 +229,11 @@ type Type struct {
 	Spec *ast.TypeSpec
 	Obj  *types.TypeName
 
-	// Methods are the exported methods declared on the type.
+	// Methods are the documented methods declared on the type, exported
+	// first.
 	Methods []*Func
 
-	// Fields are the exported fields of a struct type, in declaration order.
+	// Fields are the documented fields of a struct type, in declaration order.
 	// It is empty for every other kind of type.
 	Fields []*Field
 
@@ -234,7 +242,7 @@ type Type struct {
 	Pkg *Package
 }
 
-// Field is an exported field of a struct type. A declaration that names
+// Field is a field of a struct type. A declaration that names
 // several fields, such as "A, B int", yields one Field per name.
 type Field struct {
 	Name string
@@ -257,6 +265,11 @@ func (f *Field) Deprecated() string {
 	return Deprecation(f.Doc)
 }
 
+// Exported reports whether the field name is exported.
+func (f *Field) Exported() bool {
+	return token.IsExported(f.Name)
+}
+
 // Summary returns the first paragraph of the type documentation.
 func (t *Type) Summary() string {
 	return FirstParagraph(t.Doc)
@@ -268,7 +281,12 @@ func (t *Type) Deprecated() string {
 	return Deprecation(t.Doc)
 }
 
-// Func is an exported function or method.
+// Exported reports whether the type name is exported.
+func (t *Type) Exported() bool {
+	return token.IsExported(t.Name)
+}
+
+// Func is a function or method.
 type Func struct {
 	Name string
 	Doc  string
@@ -295,6 +313,11 @@ func (f *Func) Deprecated() string {
 	return Deprecation(f.Doc)
 }
 
+// Exported reports whether the function or method name is exported.
+func (f *Func) Exported() bool {
+	return token.IsExported(f.Name)
+}
+
 // ValueKind distinguishes constants from variables.
 type ValueKind int
 
@@ -312,7 +335,7 @@ func (k ValueKind) String() string {
 	return "const"
 }
 
-// Value is an exported constant or variable.
+// Value is a constant or variable.
 type Value struct {
 	Name string
 	Kind ValueKind
@@ -336,6 +359,11 @@ func (v *Value) Summary() string {
 // string when it is not deprecated.
 func (v *Value) Deprecated() string {
 	return Deprecation(v.Doc)
+}
+
+// Exported reports whether the value name is exported.
+func (v *Value) Exported() bool {
+	return token.IsExported(v.Name)
 }
 
 // Example is a runnable example from a _test.go file.
@@ -363,6 +391,19 @@ type File struct {
 
 	// Path is the absolute path on disk.
 	Path string
+}
+
+// CompareNames orders two identifiers for display: exported names before
+// unexported ones, then by name. It returns a negative, zero, or positive
+// value as [strings.Compare] does.
+func CompareNames(lhs, rhs string) int {
+	if l, r := token.IsExported(lhs), token.IsExported(rhs); l != r {
+		if l {
+			return -1
+		}
+		return 1
+	}
+	return strings.Compare(lhs, rhs)
 }
 
 // FirstParagraph returns the text up to the first blank line of doc.

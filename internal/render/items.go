@@ -21,6 +21,7 @@ func (b *builder) typeItem(t *model.Type) item {
 		Summary:    summary,
 		Full:       full,
 		Deprecated: t.Deprecated(),
+		Unexported: !t.Exported(),
 	}
 }
 
@@ -38,6 +39,7 @@ func (b *builder) funcItem(prefix string, f *model.Func) item {
 		Summary:    summary,
 		Full:       full,
 		Deprecated: f.Deprecated(),
+		Unexported: !f.Exported(),
 	}
 }
 
@@ -58,6 +60,7 @@ func (b *builder) valueItem(prefix string, v *model.Value) item {
 		Summary:    summary,
 		Full:       full,
 		Deprecated: v.Deprecated(),
+		Unexported: !v.Exported(),
 	}
 }
 
@@ -72,6 +75,7 @@ func (b *builder) fieldItem(f *model.Field) item {
 		Summary:    summary,
 		Full:       full,
 		Deprecated: f.Deprecated(),
+		Unexported: !f.Exported(),
 		Embedded:   f.Embedded,
 	}
 }
@@ -171,6 +175,7 @@ func (b *builder) implItem(prefix string, impl relate.Impl, receiver string) ite
 	it.SourceHref = local.sourceHref(impl.Local.Spec)
 	it.Summary, it.Full = local.summaryAndFull(local.doc(impl.Local.Doc))
 	it.Internal = impl.Local.Pkg.Internal()
+	it.Unexported = !impl.Local.Exported()
 	it.Deprecated = impl.Local.Deprecated()
 	return it
 }

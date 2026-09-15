@@ -492,6 +492,101 @@ func TestRenderer_Type(t *testing.T) {
 	}
 }
 
+func TestRenderer_WithUnexported_MarksUnexportedSymbols(t *testing.T) {
+	t.Parallel()
+
+	const badge = `<span class="badge badge-unexported" title="Not exported. It cannot be named outside its package.">unexported</span>`
+
+	testCases := []struct {
+		name          string
+		render        func(*render.Renderer, *strings.Builder) error
+		wantFragments fragments
+	}{
+		{
+			name: "package page lists unexported symbols last",
+			render: func(r *render.Renderer, out *strings.Builder) error {
+				return r.Module(out, loadertest.Unexported(t).Modules[0])
+			},
+			wantFragments: fragments{
+				`<li><a href="#type.Stack">Stack</a></li>
+      <li><a href="#type.point">point</a> ` + badge + `</li>`,
+				`<li><a href="#func.ZeroCircle">ZeroCircle</a></li>
+      <li><a href="#func.newPoint">newPoint</a> ` + badge + `</li>
+      <li><a href="#func.unexported">unexported</a> ` + badge + `</li>`,
+				`<li><a href="#const.Version">Version</a></li>
+      <li><a href="#const.maxPoints">maxPoints</a> ` + badge + `</li>`,
+				`<details class="item" id="type.point" open>`,
+				`<a href="~point.html"><span class="nx">point</span></a>`,
+				`<div class="item-links">` + badge + ` <a class="src" href="sample.go.html#L184">source</a></div>`,
+			},
+		},
+		{
+			name: "unexported type page",
+			render: func(r *render.Renderer, out *strings.Builder) error {
+				return r.Type(out, loadertest.UnexportedType(t, "", "point"))
+			},
+			wantFragments: fragments{
+				`<h1><span class="kind">struct</span> point ` + badge + `</h1>`,
+				`<details class="item" id="field.y" open>`,
+				`<div class="item-links">` + badge + ` <a class="src" href="sample.go.html#L189">source</a></div>`,
+				`<details class="item" id="ctor.newPoint" open>`,
+				`<a href="~newPoint.html"><span class="nf">newPoint</span></a>`,
+				`<details class="item" id="method.Name" open>`,
+				`<a href="~point.Name.html"><span class="nf">Name</span></a>`,
+				`<details class="item" id="method.shift" open>`,
+				`<a href="~point.~shift.html"><span class="nf">shift</span></a>`,
+				`<details class="item" id="instance.origin" open>`,
+			},
+		},
+		{
+			name: "interface page lists unexported implementation last",
+			render: func(r *render.Renderer, out *strings.Builder) error {
+				return r.Type(out, loadertest.UnexportedType(t, "", "Named"))
+			},
+			wantFragments: fragments{
+				`<li><a href="#implementations.example.com/sample.Square">Square</a></li>
+      <li><a href="#implementations.example.com/sample.point">point</a> ` + badge + `</li>`,
+				`<span class="badge badge-receiver" title="implemented by *point"><code>*point</code></span> ` + badge,
+				`<details class="item" id="ctor.newPoint" open>`,
+			},
+		},
+		{
+			name: "exported type page shows unexported members",
+			render: func(r *render.Renderer, out *strings.Builder) error {
+				return r.Type(out, loadertest.UnexportedType(t, "", "Circle"))
+			},
+			wantFragments: fragments{
+				`<span class="nx">hidden</span> <a href="https://pkg.go.dev/builtin#int"><span class="kt">int</span></a>`,
+				`<details class="item" id="field.hidden" open>`,
+				`<details class="item" id="method.sealed" open>`,
+				`<a href="Circle.~sealed.html"><span class="nf">sealed</span></a>`,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			sut := newRendererFor(t, loadertest.Unexported(t))
+			var out strings.Builder
+
+			// Act
+			err := tc.render(sut, &out)
+			html := out.String()
+
+			// Assert
+			if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+				t.Fatalf("Renderer render = %v, want nil", got)
+			}
+			if got, want := missing(html, tc.wantFragments), []string(nil); !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+				t.Errorf("Renderer missing fragments:\n%s", strings.Join(got, "\n"))
+			}
+		})
+	}
+}
+
 func TestRenderer_Type_ExternalImplementationHasNoSourceLink(t *testing.T) {
 	t.Parallel()
 

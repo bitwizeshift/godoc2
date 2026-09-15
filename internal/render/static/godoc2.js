@@ -197,6 +197,7 @@
     }
     matches.sort(function (a, b) {
       if (a.score !== b.score) { return a.score - b.score; }
+      if (!a.entry.unexported !== !b.entry.unexported) { return a.entry.unexported ? 1 : -1; }
       return a.entry.name.localeCompare(b.entry.name);
     });
     matches = matches.slice(0, 100);
@@ -206,8 +207,9 @@
     }
     for (var j = 0; j < matches.length; j++) {
       var e = matches[j].entry;
+      var mark = e.unexported ? "<span class=\"badge badge-unexported\" title=\"Not exported. It cannot be named outside its package.\">unexported</span>" : "";
       html += "<div class=\"search-result\"><span class=\"kind\">" + escapeHTML(e.kind) + "</span>" +
-        "<span><a href=\"" + escapeHTML(rootPrefix + e.path) + "\">" + escapeHTML(e.name) + "</a>" +
+        "<span><a href=\"" + escapeHTML(rootPrefix + e.path) + "\">" + escapeHTML(e.name) + "</a>" + mark +
         "<span class=\"pkg\">" + escapeHTML(e.package) + "</span></span></div>";
     }
     results.innerHTML = html;

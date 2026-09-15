@@ -21,12 +21,14 @@ const (
 	inputGroup  = "Input Flags"
 )
 
-// OutputFlags owns the --output flag and builds the output sink from it.
+// OutputFlags owns the --output and --include-unexported flags and builds
+// the output sink from them.
 type OutputFlags struct {
-	output string
+	output     string
+	unexported bool
 }
 
-// RegisterArgs registers --output/-o.
+// RegisterArgs registers --output/-o and --include-unexported/-u.
 func (f *OutputFlags) RegisterArgs(cl *arg.CommandLine) {
 	output := arg.Flag("output", &f.output,
 		arg.Shorthand("o"),
@@ -35,8 +37,13 @@ func (f *OutputFlags) RegisterArgs(cl *arg.CommandLine) {
 		arg.DefaultValue(DefaultOutput),
 		arg.CompleteDirs(),
 	)
+	unexported := arg.Flag("include-unexported", &f.unexported,
+		arg.Shorthand("u"),
+		arg.Usage("document unexported symbols as well, after the exported ones"),
+	)
 	cl.Add(output)
-	arg.Group(outputGroup, output)
+	cl.Add(unexported)
+	arg.Group(outputGroup, output, unexported)
 }
 
 var _ arg.Registrar = (*OutputFlags)(nil)
@@ -47,6 +54,11 @@ func (f *OutputFlags) Dir() string {
 		return DefaultOutput
 	}
 	return f.output
+}
+
+// Unexported reports whether unexported symbols are documented.
+func (f *OutputFlags) Unexported() bool {
+	return f.unexported
 }
 
 // Sink returns the sink that writes into the output directory.

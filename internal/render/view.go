@@ -63,6 +63,7 @@ type treeNode struct {
 	Text       string
 	Href       string
 	Internal   bool
+	Unexported bool
 	Deprecated string
 	Open       bool
 	Children   []*treeNode
@@ -75,6 +76,7 @@ type sidebarItem struct {
 	Text       string
 	Href       string
 	Internal   bool
+	Unexported bool
 	Deprecated string
 }
 
@@ -84,6 +86,7 @@ type heading struct {
 	Kind       string
 	Name       string
 	Internal   bool
+	Unexported bool
 	Deprecated string
 }
 
@@ -118,6 +121,7 @@ type tableRow struct {
 	Name       string
 	Href       string
 	Internal   bool
+	Unexported bool
 	Deprecated string
 	Summary    template.HTML
 }
@@ -132,6 +136,7 @@ type item struct {
 	Summary    template.HTML
 	Full       template.HTML
 	Internal   bool
+	Unexported bool
 	Deprecated string
 
 	// Receiver is the form of the implementing type, T or *T, for relation

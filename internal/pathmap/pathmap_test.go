@@ -72,24 +72,79 @@ func TestPackage(t *testing.T) {
 func TestSymbol(t *testing.T) {
 	t.Parallel()
 
-	// Act
-	p := pathmap.Symbol(module, "args", "CommandLine")
+	testCases := []struct {
+		name   string
+		symbol string
+		want   string
+	}{
+		{
+			name:   "exported",
+			symbol: "CommandLine",
+			want:   "github.com/example/mod/args/CommandLine.html",
+		},
+		{
+			name:   "unexported",
+			symbol: "commandLine",
+			want:   "github.com/example/mod/args/~commandLine.html",
+		},
+	}
 
-	// Assert
-	if got, want := p, "github.com/example/mod/args/CommandLine.html"; !cmp.Equal(got, want) {
-		t.Errorf("Symbol(...) = %q, want %q", got, want)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Act
+			p := pathmap.Symbol(module, "args", tc.symbol)
+
+			// Assert
+			if got, want := p, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("Symbol(...) = %q, want %q", got, want)
+			}
+		})
 	}
 }
 
 func TestMethod(t *testing.T) {
 	t.Parallel()
 
-	// Act
-	p := pathmap.Method(module, "args", "Widget", "Execute")
+	testCases := []struct {
+		name     string
+		typeName string
+		method   string
+		want     string
+	}{
+		{
+			name:     "exported",
+			typeName: "Widget",
+			method:   "Execute",
+			want:     "github.com/example/mod/args/Widget.Execute.html",
+		},
+		{
+			name:     "unexported method",
+			typeName: "Widget",
+			method:   "execute",
+			want:     "github.com/example/mod/args/Widget.~execute.html",
+		},
+		{
+			name:     "unexported type",
+			typeName: "widget",
+			method:   "Execute",
+			want:     "github.com/example/mod/args/~widget.Execute.html",
+		},
+	}
 
-	// Assert
-	if got, want := p, "github.com/example/mod/args/Widget.Execute.html"; !cmp.Equal(got, want) {
-		t.Errorf("Method(...) = %q, want %q", got, want)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Act
+			p := pathmap.Method(module, "args", tc.typeName, tc.method)
+
+			// Assert
+			if got, want := p, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("Method(...) = %q, want %q", got, want)
+			}
+		})
 	}
 }
 

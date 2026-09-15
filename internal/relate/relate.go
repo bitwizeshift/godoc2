@@ -38,13 +38,17 @@ type Index struct {
 	local      map[*types.TypeName]*model.Type
 	interfaces []*types.TypeName
 	named      []*types.TypeName
+
+	// unexported includes the unexported types of the site as candidates.
+	unexported bool
 }
 
 // New builds the index for site.
 func New(site *model.Site) *Index {
 	idx := &Index{
-		packages: map[string]*model.Package{},
-		local:    map[*types.TypeName]*model.Type{},
+		packages:   map[string]*model.Package{},
+		local:      map[*types.TypeName]*model.Type{},
+		unexported: site.Unexported,
 	}
 	pkgs := site.Packages()
 	for _, p := range pkgs {
@@ -62,8 +66,9 @@ func New(site *model.Site) *Index {
 	return idx
 }
 
-// scan collects the exported candidate types of pkg and of every package it
-// imports, skipping internal packages outside the site.
+// scan collects the candidate types of pkg and of every package it imports,
+// skipping internal packages outside the site. Unexported types are
+// candidates only inside a site that includes them.
 func (idx *Index) scan(pkg *types.Package, seen map[*types.Package]bool) {
 	if pkg == nil || seen[pkg] {
 		return
@@ -75,7 +80,10 @@ func (idx *Index) scan(pkg *types.Package, seen map[*types.Package]bool) {
 	}
 	for _, name := range pkg.Scope().Names() {
 		tn, ok := pkg.Scope().Lookup(name).(*types.TypeName)
-		if !ok || !tn.Exported() || tn.IsAlias() {
+		if !ok || tn.IsAlias() {
+			continue
+		}
+		if !tn.Exported() && !(local && idx.unexported) {
 			continue
 		}
 		named, ok := tn.Type().(*types.Named)
@@ -105,7 +113,8 @@ func isInternalPath(path string) bool {
 }
 
 // Instances returns the constants and variables of the package of t whose
-// type is t or a pointer to t.
+// type is t or a pointer to t: the exported constants, then the exported
+// variables, then the unexported ones in the same order.
 func (idx *Index) Instances(t *model.Type) []*model.Value {
 	if t.Obj == nil || t.Pkg == nil {
 		return nil
@@ -116,7 +125,22 @@ func (idx *Index) Instances(t *model.Type) []*model.Value {
 			result = append(result, v)
 		}
 	}
+	slices.SortStableFunc(result, func(lhs, rhs *model.Value) int {
+		return compareExported(lhs.Exported(), rhs.Exported())
+	})
 	return result
+}
+
+// compareExported orders an exported entity before an unexported one.
+func compareExported(lhs, rhs bool) int {
+	switch {
+	case lhs == rhs:
+		return 0
+	case lhs:
+		return -1
+	default:
+		return 1
+	}
 }
 
 // FuncGroup is the set of functions declared in one package.
@@ -266,7 +290,7 @@ func Groups(impls []Impl, t *model.Type) []Group {
 	}
 	for _, g := range result {
 		slices.SortFunc(g.Impls, func(lhs, rhs Impl) int {
-			return strings.Compare(lhs.Obj.Name(), rhs.Obj.Name())
+			return model.CompareNames(lhs.Obj.Name(), rhs.Obj.Name())
 		})
 	}
 	slices.SortFunc(result, func(lhs, rhs *Group) int {
