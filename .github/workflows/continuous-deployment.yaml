@@ -12,3 +12,9 @@ jobs:
   deploy-docs:
     name: Deploy Docs
     uses: ./.github/workflows/godoc-deploy.yaml
+
+  go-release:
+    name: Release godoc2
+    uses: ./.github/workflows/go-release.yaml
+    with:
+      version: snapshot

@@ -1,0 +1,51 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: godoc2
+
+builds:
+  - id: godoc2
+    main: ./cmd/godoc2
+    binary: godoc2
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: godoc2
+    ids:
+      - godoc2
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+sboms:
+  - id: archives
+    artifacts: archive
+
+release:
+  github:
+    owner: bitwizeshift
+    name: godoc2
+  # The release tag exists only in the local checkout. GitHub creates the
+  # remote tag at this commit when the release is created.
+  target_commitish: "{{ .Commit }}"
+  prerelease: auto

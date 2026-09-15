@@ -1,0 +1,104 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Release Go
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        description: |
+          The semantic version to release, for example 1.2.3. The release tag
+          is v<version>.
+
+          The value "snapshot" makes a snapshot build. The build output is
+          uploaded as a workflow artifact. No GitHub Release is created.
+        required: true
+
+permissions:
+  # For checkout and for uploading assets to the release
+  contents: write
+  # For signing attestations with Sigstore
+  id-token: write
+  # For storing attestations
+  attestations: write
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    outputs:
+      archives: ${{ steps.list-archives.outputs.archives }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # The tag is created locally only. goreleaser creates the release with
+      # this tag at the current commit, and GitHub creates the remote tag.
+      - name: Create release tag
+        if: ${{ inputs.version != 'snapshot' }}
+        env:
+          version: ${{ inputs.version }}
+        run: git tag "v${version#v}"
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+
+      - name: Run goreleaser
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean ${{ inputs.version == 'snapshot' && '--snapshot' || '' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: List archives
+        id: list-archives
+        run: |
+          archives=$(jq -c '[.[] | select(.type == "Archive") | .name]' dist/artifacts.json)
+          echo "archives=${archives}" >> "${GITHUB_OUTPUT}"
+
+      - name: Attest build provenance
+        if: ${{ inputs.version != 'snapshot' }}
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-checksums: dist/checksums.txt
+
+      - name: Upload dist
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  attest-sbom:
+    name: Attest SBOM (${{ matrix.archive }})
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        archive: ${{ fromJSON(needs.build.outputs.archives) }}
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
+
+      - name: Attest SBOM
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-path: dist/${{ matrix.archive }}
+          sbom-path: dist/${{ matrix.archive }}.sbom.json

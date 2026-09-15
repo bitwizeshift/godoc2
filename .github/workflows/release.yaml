@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        description: |
+          The semantic version to release, for example 1.2.3. The release tag
+          is v<version>. The value "snapshot" makes a snapshot build only.
+        required: true
+
+concurrency:
+  group: release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  go-release:
+    name: Release Go
+    uses: ./.github/workflows/go-release.yaml
+    with:
+      version: ${{ inputs.version }}
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
