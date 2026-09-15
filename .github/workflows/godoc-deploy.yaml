@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy-pages:
+  build-pages:
     name: Deploy Godoc Pages
     runs-on: ubuntu-latest
     steps:
@@ -36,8 +36,9 @@ jobs:
         with:
           path: dist/
 
-  deploy:
+  deploy-pages:
     name: Deploy to GitHub Pages
+    needs: build-pages
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
