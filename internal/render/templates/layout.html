@@ -43,7 +43,7 @@
     <nav class="breadcrumb" aria-label="Breadcrumb">
       {{- range .Breadcrumb}}
       {{- if .Separator}}<span class="sep">{{.Separator}}</span>{{end}}
-      {{- if .Badge}}<a class="badge badge-module" href="{{.Href}}">{{.Text}}</a>
+      {{- if .Badge}}<a class="badge badge-module" href="{{.Href}}"{{with .Title}} title="{{.}}"{{end}}>{{.Text}}</a>
       {{- else if .Href}}<a href="{{.Href}}">{{.Text}}</a>
       {{- else}}<span class="crumb">{{.Text}}</span>{{end}}
       {{- end}}

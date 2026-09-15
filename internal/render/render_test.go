@@ -66,7 +66,7 @@ func TestRenderer_Module(t *testing.T) {
 	wantSections := []string{"documentation", "tools", "packages", "examples", "constants", "variables", "types", "functions"}
 	wantFragments := fragments{
 		`<h1><span class="kind">package</span> sample</h1>`,
-		`<a class="badge badge-module" href="index.html">module</a>`,
+		`<a class="badge badge-module" href="index.html" title="example.com/sample">module</a>`,
 		`<td><a href="cmd/tool/index.html">tool</a></td>`,
 		`<td><a href="internal/secret/index.html">internal/secret</a> <span class="badge badge-internal" title="Importable only by packages rooted at the parent of the internal directory.">internal</span></td>`,
 		`<td><a href="shapes/index.html">shapes</a></td>`,
@@ -171,7 +171,7 @@ func TestRenderer_Root_WithSeveralModules_ListsModules(t *testing.T) {
 	wantFragments := fragments{
 		`<title>Modules</title>`,
 		`<a class="sidebar-logo" href="index.html" title="Modules" aria-label="Modules">`,
-		`<a class="badge badge-module" href="index.html">modules</a>`,
+		`<a class="badge badge-module" href="index.html">workspace</a>`,
 		`<h1>Modules</h1>`,
 		`<h1 id="multi">Multi</h1>`,
 		`<a href="example.com/multi/alpha/index.html">alpha</a>`,
@@ -210,8 +210,8 @@ func TestRenderer_Package_WithSeveralModules_LinksToRoot(t *testing.T) {
 	var out strings.Builder
 	wantFragments := fragments{
 		`<a class="sidebar-logo" href="../../../../index.html" title="Modules" aria-label="Modules">`,
-		`<a class="badge badge-module" href="../../../../index.html">modules</a>`,
-		`<span class="sep">/</span><a class="badge badge-module" href="../index.html">module</a>`,
+		`<a class="badge badge-module" href="../../../../index.html">workspace</a>`,
+		`<span class="sep">/</span><a class="badge badge-module" href="../index.html" title="example.com/multi/beta">module</a>`,
 		`<span class="sep">/</span><a href="index.html">lib</a>`,
 	}
 

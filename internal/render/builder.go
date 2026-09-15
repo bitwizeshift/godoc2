@@ -189,10 +189,10 @@ func exampleTitle(ex *model.Example) string {
 
 // breadcrumb returns the path from the module badge to the package p of mod,
 // followed by the given symbol crumbs. p is nil for a module without a root
-// package. In a site with several modules, the modules badge comes first.
+// package. In a site with several modules, the workspace badge comes first.
 func (b *builder) breadcrumb(mod *model.Module, p *model.Package, symbols ...crumb) []crumb {
 	var crumbs []crumb
-	module := crumb{Text: "module", Href: b.rel(pathmap.Module(mod.Path)), Badge: true}
+	module := crumb{Text: "module", Href: b.rel(pathmap.Module(mod.Path)), Badge: true, Title: mod.Path}
 	if b.multiModule() {
 		module.Separator = "/"
 		crumbs = append(crumbs, b.rootCrumb())
@@ -220,7 +220,7 @@ func (b *builder) breadcrumb(mod *model.Module, p *model.Package, symbols ...cru
 
 // rootCrumb returns the badge that links to the root page of the site.
 func (b *builder) rootCrumb() crumb {
-	return crumb{Text: "modules", Href: b.rel(pathmap.Root()), Badge: true}
+	return crumb{Text: "workspace", Href: b.rel(pathmap.Root()), Badge: true}
 }
 
 // appendSection adds s to the page when it is not nil.

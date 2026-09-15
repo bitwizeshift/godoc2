@@ -38,8 +38,11 @@ type crumb struct {
 	Text string
 	Href string
 
-	// Badge marks the leading module and modules badges.
+	// Badge marks the leading workspace and module badges.
 	Badge bool
+
+	// Title is the hover text of a badge. It is empty for a plain element.
+	Title string
 
 	// Separator precedes the element: "/" between directories, "." between
 	// symbols, or empty for the first element.
