@@ -319,9 +319,14 @@ pre.chroma a { color: inherit; text-decoration: underline; text-decoration-color
 pre.chroma a:hover { color: var(--color-brand); text-decoration-color: var(--color-brand); }
 .definition { margin: 0 0 1.5rem; }
 
+/* Declarations and item code have no background. The highlighter theme sets
+   one on .chroma from a dark-theme selector with three class-level parts, so
+   the id gives this rule priority over it. */
+#main .definition pre.chroma,
+#main .item-code pre.chroma { background: none; }
+
 .docblock pre {
   padding: 0.75rem 1rem;
-  background: var(--color-background-accented);
   border-radius: 6px;
   overflow-x: auto;
 }
@@ -364,7 +369,6 @@ details.item > summary::before {
 details.item[open] > summary::before { content: "[−]"; }
 details.item > summary a { cursor: pointer; }
 .item-code { flex: 1 1 auto; min-width: 0; }
-.item-code pre.chroma { background: var(--color-background-accented); }
 .item-links { flex: 0 0 auto; padding: 0.75rem 0.5rem 0 0; display: flex; gap: 0.5rem; align-items: center; }
 .item-doc { padding: 0.5rem 1rem 0.25rem 2.25rem; }
 .item-doc .summary p:first-child { margin-top: 0; }
