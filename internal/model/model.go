@@ -225,9 +225,36 @@ type Type struct {
 	// Methods are the exported methods declared on the type.
 	Methods []*Func
 
+	// Fields are the exported fields of a struct type, in declaration order.
+	// It is empty for every other kind of type.
+	Fields []*Field
+
 	Examples []*Example
 
 	Pkg *Package
+}
+
+// Field is an exported field of a struct type. A declaration that names
+// several fields, such as "A, B int", yields one Field per name.
+type Field struct {
+	Name string
+	Doc  string
+
+	// Embedded reports whether the field is declared by its type alone.
+	Embedded bool
+
+	// Spec is the declaration the field belongs to.
+	Spec *ast.Field
+	Obj  *types.Var
+
+	// Type is the struct that declares the field.
+	Type *Type
+}
+
+// Deprecated returns the deprecation message of the field, or an empty
+// string when it is not deprecated.
+func (f *Field) Deprecated() string {
+	return Deprecation(f.Doc)
 }
 
 // Summary returns the first paragraph of the type documentation.

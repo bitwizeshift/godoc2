@@ -153,6 +153,11 @@ func TestTitle(t *testing.T) {
 			want:  "Importable only by packages rooted at the parent of the internal directory.",
 		},
 		{
+			name:  "embedded",
+			label: "embedded",
+			want:  "Embedded in the struct. Its fields and methods are promoted to the struct.",
+		},
+		{
 			name:  "unknown label",
 			label: "deprecated",
 			want:  "",

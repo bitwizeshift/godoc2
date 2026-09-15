@@ -365,7 +365,82 @@ func (c *converter) typ(t *doc.Type) *model.Type {
 	}
 	mt.Methods = c.funcs(t.Methods, mt)
 	sortByName(mt.Methods, func(f *model.Func) string { return f.Name })
+	mt.Fields = c.fields(mt)
 	return mt
+}
+
+// fields lists the exported fields of a struct type in declaration order.
+// The [go/doc] filter removes the unexported fields from the syntax before
+// this runs, but the check on the name is kept for embedded fields.
+func (c *converter) fields(t *model.Type) []*model.Field {
+	if t.Spec == nil {
+		return nil
+	}
+	st, ok := t.Spec.Type.(*ast.StructType)
+	if !ok {
+		return nil
+	}
+	var result []*model.Field
+	for _, f := range st.Fields.List {
+		if len(f.Names) == 0 {
+			if id := embeddedIdent(f.Type); id != nil && id.IsExported() {
+				result = append(result, c.field(t, f, id, true))
+			}
+			continue
+		}
+		for _, name := range f.Names {
+			if name.IsExported() {
+				result = append(result, c.field(t, f, name, false))
+			}
+		}
+	}
+	return result
+}
+
+func (c *converter) field(t *model.Type, f *ast.Field, name *ast.Ident, embedded bool) *model.Field {
+	var obj *types.Var
+	if c.pkg.Info != nil {
+		obj, _ = c.pkg.Info.Defs[name].(*types.Var)
+	}
+	return &model.Field{
+		Name:     name.Name,
+		Doc:      fieldDoc(f),
+		Embedded: embedded,
+		Spec:     f,
+		Obj:      obj,
+		Type:     t,
+	}
+}
+
+// fieldDoc returns the doc comment of a field, or else its line comment.
+func fieldDoc(f *ast.Field) string {
+	if f.Doc != nil {
+		return f.Doc.Text()
+	}
+	if f.Comment != nil {
+		return f.Comment.Text()
+	}
+	return ""
+}
+
+// embeddedIdent returns the identifier that names the type of an embedded
+// field: T, *T, pkg.T, or an instantiation of one of these. It returns nil
+// for any other expression.
+func embeddedIdent(e ast.Expr) *ast.Ident {
+	switch e := e.(type) {
+	case *ast.Ident:
+		return e
+	case *ast.StarExpr:
+		return embeddedIdent(e.X)
+	case *ast.SelectorExpr:
+		return e.Sel
+	case *ast.IndexExpr:
+		return embeddedIdent(e.X)
+	case *ast.IndexListExpr:
+		return embeddedIdent(e.X)
+	default:
+		return nil
+	}
 }
 
 // typeSpec returns the spec of the named type inside its declaration group.

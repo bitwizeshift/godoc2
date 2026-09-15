@@ -61,6 +61,29 @@ func (b *builder) valueItem(prefix string, v *model.Value) item {
 	}
 }
 
+// fieldItem returns the list entry of a struct field.
+func (b *builder) fieldItem(f *model.Field) item {
+	summary, full := b.summaryAndFull(b.doc(f.Doc))
+	return item{
+		ID:         "field." + f.Name,
+		Name:       f.Name,
+		Code:       b.code(b.printer("").Field(f)),
+		SourceHref: b.sourceHref(f.Spec),
+		Summary:    summary,
+		Full:       full,
+		Deprecated: f.Deprecated(),
+		Embedded:   f.Embedded,
+	}
+}
+
+func (b *builder) fieldItems(fields []*model.Field) []item {
+	var items []item
+	for _, f := range fields {
+		items = append(items, b.fieldItem(f))
+	}
+	return items
+}
+
 func (b *builder) typeItems(types []*model.Type) []item {
 	var items []item
 	for _, t := range types {

@@ -144,6 +144,7 @@ func TestLoad_WithFixtureModule_ReturnsModule(t *testing.T) {
 				"struct Counter":  {"Add"},
 				"struct Grid":     nil,
 				"alias ID":        nil,
+				"struct Label":    nil,
 				"interface Named": nil,
 				"interface Shape": nil,
 				"struct Square":   {"Name", "String"},
@@ -373,6 +374,100 @@ func TestLoad_WithFixtureModule_AssignsExamples(t *testing.T) {
 	if got, want := examplesOf(site.Modules[0].Packages[0]), want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
 		t.Errorf("Load(...) examples mismatch (-want +got):\n%s", cmp.Diff(want, got))
 	}
+}
+
+// fieldSummary is the comparable projection of a [model.Field].
+type fieldSummary struct {
+	Name     string
+	Doc      string
+	Embedded bool
+	Obj      string
+	Type     string
+}
+
+func summarizeFields(fields []*model.Field) []fieldSummary {
+	var result []fieldSummary
+	for _, f := range fields {
+		s := fieldSummary{Name: f.Name, Doc: f.Doc, Embedded: f.Embedded, Type: f.Type.Name}
+		if f.Obj != nil {
+			s.Obj = f.Obj.String()
+		}
+		result = append(result, s)
+	}
+	return result
+}
+
+func TestLoad_WithFixtureModule_AssignsFields(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		typ  string
+		want []fieldSummary
+	}{
+		{
+			name: "struct with every kind of field",
+			typ:  "Label",
+			want: []fieldSummary{
+				{Name: "Reader", Embedded: true, Obj: "field Reader io.Reader", Type: "Label"},
+				{Name: "Text", Doc: "Text is the label text.\n\nIt is drawn in [Color] Red.\n", Obj: "field Text string", Type: "Label"},
+				{Name: "Width", Doc: "Width and Height are the size of the label box.\n", Obj: "field Width int", Type: "Label"},
+				{Name: "Height", Doc: "Width and Height are the size of the label box.\n", Obj: "field Height int", Type: "Label"},
+				{Name: "Font", Obj: "field Font string", Type: "Label"},
+				{Name: "Legacy", Doc: "Legacy is the old label text.\n\nDeprecated: Use Text instead.\n", Obj: "field Legacy string", Type: "Label"},
+			},
+		},
+		{
+			name: "struct with only unexported fields",
+			typ:  "Counter",
+			want: nil,
+		},
+		{
+			name: "interface",
+			typ:  "Named",
+			want: nil,
+		},
+		{
+			name: "alias",
+			typ:  "ID",
+			want: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			ctx := context.Background()
+			cfg := loader.Config{Dir: fixtureDir(t), Patterns: []string{"."}}
+
+			// Act
+			site, err := loader.Load(ctx, cfg)
+
+			// Assert
+			if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+				t.Fatalf("Load(...) = %v, want nil", got)
+			}
+			fields := summarizeFields(typeOf(t, site.Modules[0].Packages[0], tc.typ).Fields)
+			if got, want := fields, tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+				t.Errorf("Load(...) fields mismatch (-want +got):\n%s", cmp.Diff(want, got))
+			}
+		})
+	}
+}
+
+// typeOf returns the named type of p. It fails the test when p does not
+// declare it.
+func typeOf(t testing.TB, p *model.Package, name string) *model.Type {
+	t.Helper()
+	for _, typ := range p.Types {
+		if typ.Name == name {
+			return typ
+		}
+	}
+	t.Fatalf("Load(...) type %q not found in %s", name, p.ImportPath)
+	return nil
 }
 
 // examplesOf collects the examples attached to functions and methods, keyed

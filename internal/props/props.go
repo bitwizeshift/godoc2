@@ -27,6 +27,7 @@ var titles = map[string]string{
 	"sealed":      "Interface with an unexported method. Only types in the same package can implement it.",
 	"noncopiable": "Must not be copied. It holds data that requires object identity, such as a lock.",
 	"internal":    "Importable only by packages rooted at the parent of the internal directory.",
+	"embedded":    "Embedded in the struct. Its fields and methods are promoted to the struct.",
 }
 
 // Title returns the hover text that explains the badge with label. It returns

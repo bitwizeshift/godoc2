@@ -153,3 +153,24 @@ func unexported() {}
 // Deprecated: Use [Version] instead. Legacy is kept only so that old
 // callers still compile.
 const Legacy = "0.9"
+
+// Label is text placed next to a shape.
+type Label struct {
+	io.Reader
+
+	// Text is the label text.
+	//
+	// It is drawn in [Color] Red.
+	Text string
+
+	Width, Height int // Width and Height are the size of the label box.
+
+	Font string `json:"font"`
+
+	// Legacy is the old label text.
+	//
+	// Deprecated: Use Text instead.
+	Legacy string
+
+	hidden bool
+}

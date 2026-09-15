@@ -326,3 +326,81 @@ func TestPrinter_Value(t *testing.T) {
 		})
 	}
 }
+
+func TestPrinter_Field(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		field *model.Field
+		want  sig.Rendered
+	}{
+		{
+			name:  "embedded field",
+			field: loadertest.Field(t, "", "Label", "Reader"),
+			want: sig.Rendered{
+				Text: "io.Reader",
+				Links: []sig.Span{
+					{Start: 0, End: 9, URL: "https://pkg.go.dev/io#Reader"},
+				},
+			},
+		},
+		{
+			name:  "named field",
+			field: loadertest.Field(t, "", "Label", "Text"),
+			want: sig.Rendered{
+				Text: "Text string",
+				Links: []sig.Span{
+					{Start: 5, End: 11, URL: builtin + "string"},
+				},
+			},
+		},
+		{
+			name:  "second name of a shared declaration",
+			field: loadertest.Field(t, "", "Label", "Height"),
+			want: sig.Rendered{
+				Text: "Height int",
+				Links: []sig.Span{
+					{Start: 7, End: 10, URL: builtin + "int"},
+				},
+			},
+		},
+		{
+			name:  "field with tag",
+			field: loadertest.Field(t, "", "Label", "Font"),
+			want: sig.Rendered{
+				Text: "Font string `json:\"font\"`",
+				Links: []sig.Span{
+					{Start: 5, End: 11, URL: builtin + "string"},
+				},
+			},
+		},
+		{
+			name:  "field of local type",
+			field: loadertest.Field(t, "", "Circle", "Color"),
+			want: sig.Rendered{
+				Text: "Color Color",
+				Links: []sig.Span{
+					{Start: 6, End: 11, URL: "Color.html"},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			sut := newPrinter(t)
+
+			// Act
+			rendered := sut.Field(tc.field)
+
+			// Assert
+			if got, want := rendered, tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+				t.Errorf("Printer.Field(...) mismatch (-want +got):\n%s", cmp.Diff(want, got))
+			}
+		})
+	}
+}

@@ -191,6 +191,7 @@ func (b *builder) typePage(t *model.Type) *page {
 		b.docSection(b.doc(t.Doc)),
 		b.examplesSection(t.Examples),
 		badgesSection(props.Badges(t)),
+		itemsSection("fields", "Fields", b.fieldItems(t.Fields)),
 		itemsSection("instances", "Instances", b.valueItems("instance", idx.Instances(t))),
 		b.funcGroupsSection("constructors", "Constructors", "ctor", idx.Constructors(t)),
 	}

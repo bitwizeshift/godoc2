@@ -137,6 +137,9 @@ type item struct {
 	// Receiver is the form of the implementing type, T or *T, for relation
 	// entries.
 	Receiver string
+
+	// Embedded marks a field entry declared by its type alone.
+	Embedded bool
 }
 
 type example struct {

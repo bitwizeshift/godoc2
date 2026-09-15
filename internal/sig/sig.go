@@ -68,6 +68,14 @@ func (p *Printer) Value(v *model.Value) Rendered {
 	return w.rendered()
 }
 
+// Field renders a single struct field: its name, type, and tag. An embedded
+// field renders as its type alone.
+func (p *Printer) Field(f *model.Field) Rendered {
+	w := p.writer()
+	w.fieldDecl(f)
+	return w.rendered()
+}
+
 func (p *Printer) writer() *writer {
 	return &writer{printer: p}
 }
@@ -392,6 +400,22 @@ func (w *writer) structType(t *ast.StructType) {
 
 func (w *writer) structField(f *ast.Field) {
 	w.field(f)
+	w.tag(f)
+}
+
+// fieldDecl writes one named field of a struct: the name, type, and tag. An
+// embedded field is written as its type alone.
+func (w *writer) fieldDecl(f *model.Field) {
+	if !f.Embedded {
+		w.str(f.Name)
+		w.str(" ")
+	}
+	w.expr(f.Spec.Type)
+	w.tag(f.Spec)
+}
+
+// tag writes the struct tag of f, when it has one.
+func (w *writer) tag(f *ast.Field) {
 	if f.Tag != nil {
 		w.str(" ")
 		w.str(f.Tag.Value)

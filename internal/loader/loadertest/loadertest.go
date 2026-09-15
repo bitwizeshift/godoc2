@@ -186,6 +186,19 @@ func Method(t testing.TB, rel, typeName, name string) *model.Func {
 	return nil
 }
 
+// Field returns the named field of a fixture struct type. It fails the test
+// when the field does not exist.
+func Field(t testing.TB, rel, typeName, name string) *model.Field {
+	t.Helper()
+	for _, f := range Type(t, rel, typeName).Fields {
+		if f.Name == name {
+			return f
+		}
+	}
+	t.Fatalf("Field(%q, %q, %q): not found in fixture", rel, typeName, name)
+	return nil
+}
+
 // Value returns the named constant or variable from the fixture package at
 // rel. It fails the test when the value does not exist.
 func Value(t testing.TB, rel, name string) *model.Value {

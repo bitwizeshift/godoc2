@@ -366,11 +366,17 @@ func TestRenderer_Type(t *testing.T) {
 		{
 			name:         "struct",
 			typ:          loadertest.Type(t, "", "Circle"),
-			wantSections: []string{"documentation", "examples", "properties", "constructors", "methods", "utilities", "implements"},
+			wantSections: []string{"documentation", "examples", "properties", "fields", "constructors", "methods", "utilities", "implements"},
 			wantFragments: fragments{
 				`<h1><span class="kind">struct</span> Circle</h1>`,
 				`<a class="src" href="sample.go.html#L44">source</a>`,
 				`// contains unexported fields`,
+				`<details class="item" id="field.Radius" open>`,
+				`<span class="nx">Radius</span> <a href="https://pkg.go.dev/builtin#float64"><span class="kt">float64</span></a>`,
+				`<a class="src" href="sample.go.html#L46">source</a>`,
+				`<div class="docblock summary"><p>Radius is the circle radius.</p>`,
+				`<details class="item" id="field.Color" open>`,
+				`<li><a href="#field.Color">Color</a></li>`,
 				`<li class="badge badge-prop" title="Size in bytes on a 64-bit system."><span class="badge-label">size</span> <span class="badge-value">24 bytes</span></li>`,
 				`<li class="badge badge-prop" title="Values can be compared with == and !=, and can be map keys."><span class="badge-label">comparable</span></li>`,
 				`<details class="item" id="ctor.NewCircle" open>`,
@@ -393,6 +399,24 @@ func TestRenderer_Type(t *testing.T) {
         <summary><h3 class="example-title">Example</h3></summary>`,
 				`<p class="example-output-label">Output:</p>
           <pre class="example-output">circle`,
+			},
+		},
+		{
+			name:         "struct with embedded and shared fields",
+			typ:          loadertest.Type(t, "", "Label"),
+			wantSections: []string{"documentation", "properties", "fields", "implements"},
+			wantFragments: fragments{
+				`<details class="item" id="field.Reader" open>`,
+				`<span class="badge badge-embedded" title="Embedded in the struct. Its fields and methods are promoted to the struct.">embedded</span>`,
+				`<details class="item" id="field.Text" open>`,
+				`<div class="docblock summary"><p>Text is the label text.</p>`,
+				`<button type="button" class="read-more">Read more</button>`,
+				`<details class="item" id="field.Width" open>`,
+				`<details class="item" id="field.Height" open>`,
+				`<div class="docblock summary"><p>Width and Height are the size of the label box.</p>`,
+				`<details class="item" id="field.Font" open>`,
+				`<span class="badge badge-deprecated" title="Use Text instead.">deprecated</span>`,
+				`<li><a href="#field.Legacy">Legacy</a> <span class="badge badge-deprecated" title="Use Text instead.">deprecated</span></li>`,
 			},
 		},
 		{
@@ -432,7 +456,7 @@ func TestRenderer_Type(t *testing.T) {
 		{
 			name:         "internal type",
 			typ:          loadertest.Type(t, "internal/secret", "Token"),
-			wantSections: []string{"documentation", "properties"},
+			wantSections: []string{"documentation", "properties", "fields"},
 			wantFragments: fragments{
 				`<h1><span class="kind">struct</span> Token <span class="badge badge-internal" title="Importable only by packages rooted at the parent of the internal directory.">internal</span></h1>`,
 				`<span class="badge-label">internal</span>`,
