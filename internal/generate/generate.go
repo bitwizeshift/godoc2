@@ -126,7 +126,10 @@ func (r *run) staticFiles() error {
 	if err := r.write(pathmap.Static(render.CSSFile), r.renderer.CSS); err != nil {
 		return err
 	}
-	return r.write(pathmap.Static(render.JSFile), r.renderer.JS)
+	if err := r.write(pathmap.Static(render.JSFile), r.renderer.JS); err != nil {
+		return err
+	}
+	return r.write(pathmap.Static(render.FaviconFile), r.renderer.Favicon)
 }
 
 // assets copies every file that a Markdown documentation file links to.

@@ -65,7 +65,8 @@ func TestRenderer_Module(t *testing.T) {
 	var out strings.Builder
 	wantSections := []string{"documentation", "tools", "packages"}
 	wantFragments := fragments{
-		`<title>example.com/sample</title>`,
+		`<title>example.com/sample (module)</title>`,
+		`<link rel="icon" type="image/svg+xml" href="../static/favicon.svg">`,
 		`<h1><span class="kind">module</span> example.com/sample</h1>`,
 		`<a class="badge badge-module" href="sample.html" title="example.com/sample">module</a>
     </nav>`,
@@ -415,6 +416,7 @@ func TestRenderer_Type(t *testing.T) {
 			typ:          loadertest.Type(t, "", "Circle"),
 			wantSections: []string{"documentation", "examples", "fields", "constructors", "methods", "utilities", "implements"},
 			wantFragments: fragments{
+				`<title>Circle - example.com/sample</title>`,
 				`<h1><span class="kind">struct</span> Circle</h1>`,
 				`<a class="src" href="sample.go.html#L44">source</a>`,
 				`// contains unexported fields`,
@@ -684,6 +686,7 @@ func TestRenderer_Func(t *testing.T) {
 			fn:           loadertest.Method(t, "", "Circle", "Area"),
 			wantSections: []string{"documentation", "examples"},
 			wantFragments: fragments{
+				`<title>Circle.Area - example.com/sample</title>`,
 				`<h1><span class="kind">func</span> Area</h1>`,
 				`<span class="sep">.</span><a href="Circle.html">Circle</a><span class="sep">.</span><span class="crumb">Area</span>`,
 			},

@@ -37,6 +37,7 @@ func (b *builder) newPage(title string, mod *model.Module) *page {
 		Title:     title,
 		HomeHref:  b.rel(pathmap.Root()),
 		HomeTitle: rootTitle,
+		Favicon:   b.rel(pathmap.Static(FaviconFile)),
 		CSS:       b.rel(pathmap.Static(CSSFile)),
 		JS:        b.rel(pathmap.Static(JSFile)),
 		IndexJS:   b.rel(pathmap.Static("search-index.js")),

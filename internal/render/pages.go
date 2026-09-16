@@ -55,7 +55,7 @@ func (b *builder) modulesSection() *section {
 // modulePage builds the page of mod: its documentation with the Tools and
 // Packages tables.
 func (b *builder) modulePage(mod *model.Module) *page {
-	pg := b.newPage(mod.Path, mod)
+	pg := b.newPage(mod.Path+" (module)", mod)
 	pg.Breadcrumb = b.breadcrumb(mod, nil)
 	pg.Heading = heading{Kind: "module", Name: mod.Path}
 	doc := b.moduleDoc(mod)
@@ -125,6 +125,12 @@ func (b *builder) addPackageMembers(pg *page, p *model.Package, hasTables bool) 
 	if !hasTables && !slices.ContainsFunc(members, func(s *section) bool { return s != nil }) {
 		pg.Sections = append(pg.Sections, section{ID: "empty", Kind: kindMessage, Message: noExportedMessage})
 	}
+}
+
+// symbolTitle returns the document title of a symbol or file page: the name
+// first, then the import path of the package that holds it.
+func symbolTitle(p *model.Package, name string) string {
+	return name + " - " + p.ImportPath
 }
 
 // partition divides items into those accepted by match and the rest, each
@@ -225,7 +231,7 @@ func (b *builder) withPackage(p *model.Package) *builder {
 
 // typePage builds the page of a type.
 func (b *builder) typePage(t *model.Type) *page {
-	pg := b.newPage(t.Pkg.ImportPath+"."+t.Name, t.Pkg.Module)
+	pg := b.newPage(symbolTitle(t.Pkg, t.Name), t.Pkg.Module)
 	pg.Breadcrumb = b.breadcrumb(t.Pkg.Module, t.Pkg, crumb{Text: t.Name, Href: ""})
 	pg.Heading = heading{Kind: t.Kind.String(), Name: t.Name, Internal: t.Pkg.Internal(), Unexported: !t.Exported(), Deprecated: t.Deprecated()}
 	pg.SourceHref = b.sourceHref(t.Spec)
@@ -257,16 +263,16 @@ func (b *builder) typePage(t *model.Type) *page {
 // funcPage builds the page of a function or method.
 func (b *builder) funcPage(f *model.Func) *page {
 	var symbols []crumb
-	title := f.Pkg.ImportPath + "." + f.Name
+	name := f.Name
 	if f.Recv != nil {
 		symbols = append(symbols, crumb{
 			Text: f.Recv.Name,
 			Href: b.rel(pathmap.Symbol(f.Pkg.Module.Path, f.Pkg.RelPath, f.Recv.Name)),
 		})
-		title = f.Pkg.ImportPath + "." + f.Recv.Name + "." + f.Name
+		name = f.Recv.Name + "." + f.Name
 	}
 	symbols = append(symbols, crumb{Text: f.Name})
-	pg := b.newPage(title, f.Pkg.Module)
+	pg := b.newPage(symbolTitle(f.Pkg, name), f.Pkg.Module)
 	pg.Breadcrumb = b.breadcrumb(f.Pkg.Module, f.Pkg, symbols...)
 	pg.Heading = heading{Kind: "func", Name: f.Name, Internal: f.Pkg.Internal(), Unexported: !f.Exported(), Deprecated: f.Deprecated()}
 	pg.SourceHref = b.sourceHref(f.Decl)
@@ -277,7 +283,7 @@ func (b *builder) funcPage(f *model.Func) *page {
 
 // valuePage builds the page of a constant or variable.
 func (b *builder) valuePage(v *model.Value) *page {
-	pg := b.newPage(v.Pkg.ImportPath+"."+v.Name, v.Pkg.Module)
+	pg := b.newPage(symbolTitle(v.Pkg, v.Name), v.Pkg.Module)
 	pg.Breadcrumb = b.breadcrumb(v.Pkg.Module, v.Pkg, crumb{Text: v.Name})
 	pg.Heading = heading{Kind: v.Kind.String(), Name: v.Name, Internal: v.Pkg.Internal(), Unexported: !v.Exported(), Deprecated: v.Deprecated()}
 	if v.Spec != nil {
@@ -304,7 +310,7 @@ func (b *builder) sourcePage(p *model.Package, file *model.File, src []byte) (*p
 	if err := b.r.highlight.Source(&out, src); err != nil {
 		return nil, err
 	}
-	pg := b.newPage(p.ImportPath+"/"+file.Name, p.Module)
+	pg := b.newPage(symbolTitle(p, file.Name), p.Module)
 	pg.Breadcrumb = b.breadcrumb(p.Module, p, crumb{Text: file.Name, Separator: "/"})
 	pg.Heading = heading{Kind: "file", Name: file.Name, Internal: p.Internal()}
 	pg.Sections = []section{{ID: "source", Kind: kindRaw, HTML: template.HTML(out.String())}}

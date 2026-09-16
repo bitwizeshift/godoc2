@@ -8,6 +8,8 @@ import (
 
 // page is the view model of every page.
 type page struct {
+	// Title is the document title: the symbol or file first, then the
+	// package that holds it.
 	Title string
 
 	// HomeHref and HomeTitle are the target and title of the sidebar logo:
@@ -15,6 +17,7 @@ type page struct {
 	HomeHref  string
 	HomeTitle string
 
+	Favicon    string
 	CSS        string
 	JS         string
 	IndexJS    string
@@ -33,8 +36,9 @@ type page struct {
 
 // redirect is the view model of the root page of a single-module site.
 type redirect struct {
-	Title string
-	Href  string
+	Title   string
+	Favicon string
+	Href    string
 }
 
 // crumb is one element of the breadcrumb path.

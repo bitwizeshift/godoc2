@@ -25,10 +25,14 @@ var siteCSS string
 //go:embed static/godoc2.js
 var siteJS string
 
+//go:embed static/favicon.svg
+var siteFavicon string
+
 // Asset names under the static directory.
 const (
-	CSSFile = "godoc2.css"
-	JSFile  = "godoc2.js"
+	CSSFile     = "godoc2.css"
+	JSFile      = "godoc2.js"
+	FaviconFile = "favicon.svg"
 )
 
 // Renderer writes the pages of one site.
@@ -74,6 +78,12 @@ func (r *Renderer) CSS(w io.Writer) error {
 // JS writes the site script.
 func (r *Renderer) JS(w io.Writer) error {
 	_, err := io.WriteString(w, siteJS)
+	return err
+}
+
+// Favicon writes the site icon.
+func (r *Renderer) Favicon(w io.Writer) error {
+	_, err := io.WriteString(w, siteFavicon)
 	return err
 }
 
@@ -137,8 +147,9 @@ func (r *Renderer) execute(w io.Writer, pg *page) error {
 // redirect writes a page that sends the browser to the page of mod.
 func (r *Renderer) redirect(w io.Writer, mod *model.Module) error {
 	pg := redirect{
-		Title: mod.Path,
-		Href:  pathmap.Rel(pathmap.Root(), pathmap.Module(mod.Path)),
+		Title:   mod.Path,
+		Favicon: pathmap.Rel(pathmap.Root(), pathmap.Static(FaviconFile)),
+		Href:    pathmap.Rel(pathmap.Root(), pathmap.Module(mod.Path)),
 	}
 	if err := r.tmpl.ExecuteTemplate(w, "redirect.html", pg); err != nil {
 		return fmt.Errorf("render: %w", err)
