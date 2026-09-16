@@ -249,7 +249,7 @@ func sidebarOf(s *section) *sidebarSection {
 	if s == nil {
 		return nil
 	}
-	entry := &sidebarSection{Title: s.Title}
+	entry := &sidebarSection{Title: s.Title, Href: "#" + s.ID}
 	for _, it := range s.Items {
 		entry.Items = append(entry.Items, sidebarItem{Text: it.Name, Href: "#" + it.ID, Internal: it.Internal, Unexported: it.Unexported, Deprecated: it.Deprecated})
 	}

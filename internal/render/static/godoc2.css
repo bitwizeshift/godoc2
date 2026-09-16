@@ -20,6 +20,7 @@
   --color-badge-unexported-text: #4a4a4a;
   --color-badge-unexported-border: #c8c8c8;
   --color-sidebar: #f7f9fa;
+  --color-sidebar-hover: #e8ecef;
   --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-code: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }
@@ -45,6 +46,7 @@
   --color-badge-unexported-text: #b8b8b8;
   --color-badge-unexported-border: #555;
   --color-sidebar: #1a1c1e;
+  --color-sidebar-hover: #2a2d30;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -69,6 +71,7 @@
     --color-badge-unexported-text: #b8b8b8;
     --color-badge-unexported-border: #555;
     --color-sidebar: #1a1c1e;
+    --color-sidebar-hover: #2a2d30;
   }
 }
 
@@ -117,16 +120,30 @@ pre code { font-size: inherit; }
   letter-spacing: 0.04em;
   color: var(--color-text-subtle);
 }
+.sidebar h3 a { color: inherit; }
+
+/* Every entry is a full-width block: the text keeps its position, and the
+   hover background reaches slightly past it on both sides. */
+.sidebar h3 a, .sidebar li > a, .sidebar li > .dir, .sidebar .tree summary {
+  display: block;
+  margin: 0 -0.4rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar a:hover { text-decoration: none; }
+.sidebar h3 a:hover, .sidebar li > a:hover, .sidebar .tree summary:hover { background: var(--color-sidebar-hover); }
 
 .sidebar ul { list-style: none; margin: 0; padding: 0; }
-.sidebar li { padding: 0.1rem 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .sidebar ul.tree ul.tree { padding-left: 1.25rem; }
 .sidebar .tree summary { cursor: pointer; list-style: none; }
 .sidebar .tree summary::-webkit-details-marker { display: none; }
 .sidebar .tree summary::before { content: "▸"; display: inline-block; width: 1em; color: var(--color-text-subtle); }
 .sidebar .tree details[open] > summary::before { content: "▾"; }
-.sidebar .tree li > a, .sidebar .tree li > .dir { margin-left: 1em; }
+.sidebar .tree li > a, .sidebar .tree li > .dir { padding-left: calc(1em + 0.4rem); }
 .sidebar .tree .dir { color: var(--color-text-subtle); }
 
 .sidebar-resizer {
@@ -292,9 +309,11 @@ a.badge:hover { text-decoration: none; background: var(--color-accent); color: #
   border-bottom: 1px solid var(--color-border-light);
   padding-bottom: 0.25rem;
   margin: 0 0 1rem;
+  position: relative;
 }
 .section h2 .anchor { color: inherit; }
-.section h2 .anchor:hover::after { content: " §"; color: var(--color-text-subtle); }
+.section h2 .anchor:hover { text-decoration: none; }
+.section h2 .anchor:hover::before { content: "§"; position: absolute; left: -1.25rem; color: var(--color-text-subtle); }
 .relation-path {
   display: inline;
   font-size: 0.9rem;

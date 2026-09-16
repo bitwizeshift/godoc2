@@ -24,13 +24,13 @@
       </svg>
     </a>
     {{- range .Sidebar}}
-    <h3>{{.Title}}</h3>
+    <h3>{{if .Href}}<a href="{{.Href}}">{{.Title}}</a>{{else}}{{.Title}}{{end}}</h3>
     {{- if .Tree}}
     {{template "tree" .Tree}}
     {{- else}}
     <ul>
       {{- range .Items}}
-      <li><a href="{{.Href}}">{{.Text}}</a>{{template "marks" .}}</li>
+      <li><a href="{{.Href}}">{{.Text}}{{template "marks" .}}</a></li>
       {{- end}}
     </ul>
     {{- end}}
@@ -165,7 +165,7 @@
   {{- end}}
 </ul>
 {{end}}
-{{define "treelabel"}}{{if .Href}}<a href="{{.Href}}">{{.Text}}</a>{{else}}<span class="dir">{{.Text}}</span>{{end}}{{template "marks" .}}{{end}}
+{{define "treelabel"}}{{if .Href}}<a href="{{.Href}}">{{.Text}}{{template "marks" .}}</a>{{else}}<span class="dir">{{.Text}}{{template "marks" .}}</span>{{end}}{{end}}
 {{define "marks"}}{{if .Internal}} <span class="badge badge-internal" title="{{badgeTitle "internal"}}">internal</span>{{end}}{{if .Unexported}} <span class="badge badge-unexported" title="{{badgeTitle "unexported"}}">unexported</span>{{end}}{{if .Deprecated}} <span class="badge badge-deprecated" title="{{.Deprecated}}">deprecated</span>{{end}}{{end}}
 {{define "item"}}
 <details class="item" id="{{.ID}}" open>

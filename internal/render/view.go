@@ -59,6 +59,10 @@ type crumb struct {
 
 type sidebarSection struct {
 	Title string
+
+	// Href links the title to the page section it names. It is empty for a
+	// group without a page section.
+	Href  string
 	Items []sidebarItem
 
 	// Tree replaces Items with a collapsible tree when it is not empty.

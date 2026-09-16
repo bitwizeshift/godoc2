@@ -384,5 +384,5 @@ func (b *builder) treeSidebar(s *section, mod *model.Module, p *model.Package) *
 		root.Internal = p.Internal()
 		root.Deprecated = p.Deprecated()
 	}
-	return &sidebarSection{Title: s.Title, Tree: packageTree(root, s.Rows)}
+	return &sidebarSection{Title: s.Title, Href: "#" + s.ID, Tree: packageTree(root, s.Rows)}
 }

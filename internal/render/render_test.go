@@ -273,21 +273,21 @@ func TestRenderer_Package(t *testing.T) {
 				`<summary><a href="index.html">sample</a></summary>`,
 				`<td><a href="shapes/index.html">shapes</a></td>`,
 				`<td><a href="empty/index.html">empty</a> <span class="badge badge-deprecated" title="Nothing lives here.">deprecated</span></td>`,
-				`<h3>Sentinel Errors</h3>
+				`<h3><a href="#errors">Sentinel Errors</a></h3>
     <ul>
       <li><a href="#var.ErrNegative">ErrNegative</a></li>
     </ul>`,
-				`<h3>Variables</h3>
+				`<h3><a href="#variables">Variables</a></h3>
     <ul>
       <li><a href="#var.DefaultColor">DefaultColor</a></li>
     </ul>`,
-				`<h3>Interfaces</h3>
+				`<h3><a href="#interfaces">Interfaces</a></h3>
     <ul>
       <li><a href="#type.Named">Named</a></li>
       <li><a href="#type.Namer">Namer</a></li>
       <li><a href="#type.Shape">Shape</a></li>
     </ul>`,
-				`<h3>Types</h3>
+				`<h3><a href="#types">Types</a></h3>
     <ul>
       <li><a href="#type.Big">Big</a></li>
       <li><a href="#type.Circle">Circle</a></li>
@@ -295,7 +295,7 @@ func TestRenderer_Package(t *testing.T) {
       <li><a href="#type.Counter">Counter</a></li>
       <li><a href="#type.Grid">Grid</a></li>
       <li><a href="#type.ID">ID</a></li>`,
-				`<li><a href="#const.Legacy">Legacy</a> <span class="badge badge-deprecated" title="Use [Version] instead. Legacy is kept only so that old callers still compile.">deprecated</span></li>`,
+				`<li><a href="#const.Legacy">Legacy <span class="badge badge-deprecated" title="Use [Version] instead. Legacy is kept only so that old callers still compile.">deprecated</span></a></li>`,
 				`<span class="badge badge-deprecated" title="Use [Version] instead. Legacy is kept only so that old callers still compile.">deprecated</span> <a class="src" href="sample.go.html#L155">source</a>`,
 				`<h1 id="usage">Usage</h1>`,
 				`<li><a href="#usage">Usage</a></li>`,
@@ -463,7 +463,7 @@ func TestRenderer_Type(t *testing.T) {
 				`<div class="docblock summary"><p>Width and Height are the size of the label box.</p>`,
 				`<details class="item" id="field.Font" open>`,
 				`<span class="badge badge-deprecated" title="Use Text instead.">deprecated</span>`,
-				`<li><a href="#field.Legacy">Legacy</a> <span class="badge badge-deprecated" title="Use Text instead.">deprecated</span></li>`,
+				`<li><a href="#field.Legacy">Legacy <span class="badge badge-deprecated" title="Use Text instead.">deprecated</span></a></li>`,
 			},
 		},
 		{
@@ -556,12 +556,12 @@ func TestRenderer_WithUnexported_MarksUnexportedSymbols(t *testing.T) {
 			},
 			wantFragments: fragments{
 				`<li><a href="#type.Stack">Stack</a></li>
-      <li><a href="#type.point">point</a> ` + badge + `</li>`,
+      <li><a href="#type.point">point ` + badge + `</a></li>`,
 				`<li><a href="#func.ZeroCircle">ZeroCircle</a></li>
-      <li><a href="#func.newPoint">newPoint</a> ` + badge + `</li>
-      <li><a href="#func.unexported">unexported</a> ` + badge + `</li>`,
+      <li><a href="#func.newPoint">newPoint ` + badge + `</a></li>
+      <li><a href="#func.unexported">unexported ` + badge + `</a></li>`,
 				`<li><a href="#const.Version">Version</a></li>
-      <li><a href="#const.maxPoints">maxPoints</a> ` + badge + `</li>`,
+      <li><a href="#const.maxPoints">maxPoints ` + badge + `</a></li>`,
 				`<details class="item" id="type.point" open>`,
 				`<a href="~point.html"><span class="nx">point</span></a>`,
 				`<div class="item-links">` + badge + ` <a class="src" href="sample.go.html#L184">source</a></div>`,
@@ -592,7 +592,7 @@ func TestRenderer_WithUnexported_MarksUnexportedSymbols(t *testing.T) {
 			},
 			wantFragments: fragments{
 				`<li><a href="#implementations.example.com/sample.Square">Square</a></li>
-      <li><a href="#implementations.example.com/sample.point">point</a> ` + badge + `</li>`,
+      <li><a href="#implementations.example.com/sample.point">point ` + badge + `</a></li>`,
 				`<span class="badge badge-receiver" title="implemented by *point"><code>*point</code></span> ` + badge,
 				`<details class="item" id="ctor.newPoint" open>`,
 			},
