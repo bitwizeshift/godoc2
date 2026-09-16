@@ -83,6 +83,8 @@ func TestRenderer_Module(t *testing.T) {
 		`<li><a href="sample/index.html">sample</a>
   </li>`,
 		`<summary><span class="dir">internal</span></summary>`,
+		`<li><a href="sample/internal/secret/index.html">secret <span class="badge badge-internal" title="Importable only by packages rooted at the parent of the internal directory.">internal</span></a>
+  </li>`,
 		`<h1 id="usage">Usage</h1>`,
 		`<li><a href="#usage">Usage</a></li>`,
 		`<a href="sample/Circle.html"><code>Circle</code></a>`,

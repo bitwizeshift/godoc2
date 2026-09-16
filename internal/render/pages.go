@@ -335,8 +335,7 @@ func (b *builder) fileItems(p *model.Package) []sidebarItem {
 func packageTree(root *treeNode, rows []tableRow) []*treeNode {
 	root.Open = true
 	for _, row := range rows {
-		node := placeNode(root, row.Rel)
-		node.Text = row.Name
+		node := placeNode(root, row.Rel, row.Name)
 		node.Href = row.Href
 		node.Internal = row.Internal
 		node.Deprecated = row.Deprecated
@@ -345,10 +344,11 @@ func packageTree(root *treeNode, rows []tableRow) []*treeNode {
 }
 
 // placeNode returns the node at rel below root, creating the missing nodes.
-// An empty rel appends a new child of root.
-func placeNode(root *treeNode, rel string) *treeNode {
+// Each node shows one path element. An empty rel appends a new child of
+// root that shows name.
+func placeNode(root *treeNode, rel, name string) *treeNode {
 	if rel == "" {
-		node := &treeNode{}
+		node := &treeNode{Text: name}
 		root.Children = append(root.Children, node)
 		return node
 	}
