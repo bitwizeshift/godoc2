@@ -6,7 +6,7 @@
 <title>{{.Title}}</title>
 <link rel="icon" type="image/svg+xml" href="{{.Favicon}}">
 <link rel="stylesheet" href="{{.CSS}}">
-<script>(function(){try{var t=localStorage.getItem("godoc2-theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t);}var w=localStorage.getItem("godoc2-sidebar-width");if(w){document.documentElement.style.setProperty("--sidebar-width",w+"px");}}catch(e){}})();</script>
+<script>(function(){var c={};try{var n=window.name;if(n&&n.indexOf("godoc2:")===0){c=JSON.parse(n.slice(7))||{};}}catch(e){}function get(k){if(Object.prototype.hasOwnProperty.call(c,k)){return c[k];}try{return localStorage.getItem(k);}catch(e){return null;}}var t=get("godoc2-theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t);}var w=get("godoc2-sidebar-width");if(w){document.documentElement.style.setProperty("--sidebar-width",w+"px");}})();</script>
 </head>
 <body>
 <nav class="sidebar" id="sidebar">

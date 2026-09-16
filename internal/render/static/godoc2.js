@@ -8,17 +8,58 @@
     return document.getElementById(id);
   }
 
+  /* Settings live in localStorage and, for the life of the tab, in
+     window.name. A site opened from disk gets a separate localStorage per
+     file or directory in some browsers, and window.name is what carries the
+     settings from page to page there. The head script of every page reads
+     both in the same order. */
+
+  var carrierPrefix = "godoc2:";
+
+  function carried() {
+    try {
+      var name = window.name;
+      if (name && name.indexOf(carrierPrefix) === 0) {
+        return JSON.parse(name.slice(carrierPrefix.length)) || {};
+      }
+    } catch (e) { /* ignore */ }
+    return {};
+  }
+
+  function carry(settings) {
+    try { window.name = carrierPrefix + JSON.stringify(settings); } catch (e) { /* ignore */ }
+  }
+
   function storageGet(key) {
+    var settings = carried();
+    if (Object.prototype.hasOwnProperty.call(settings, key)) { return settings[key]; }
     try { return localStorage.getItem(key); } catch (e) { return null; }
   }
 
   function storageSet(key, value) {
     try { localStorage.setItem(key, value); } catch (e) { /* ignore */ }
+    var settings = carried();
+    settings[key] = value;
+    carry(settings);
   }
 
   function storageRemove(key) {
     try { localStorage.removeItem(key); } catch (e) { /* ignore */ }
+    var settings = carried();
+    delete settings[key];
+    carry(settings);
   }
+
+  /* Refresh the local copy from the carried settings, so that a new tab
+     opened from this page starts from the latest values. */
+  (function () {
+    var settings = carried();
+    for (var key in settings) {
+      if (Object.prototype.hasOwnProperty.call(settings, key)) {
+        try { localStorage.setItem(key, settings[key]); } catch (e) { /* ignore */ }
+      }
+    }
+  })();
 
   /* Theme */
 
