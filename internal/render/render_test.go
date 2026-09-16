@@ -71,17 +71,13 @@ func TestRenderer_Module(t *testing.T) {
 		`<a class="badge badge-module" href="sample.html" title="example.com/sample">module</a>
     </nav>`,
 		`<td><a href="sample/cmd/tool/index.html">tool</a></td>`,
-		`<td><a href="sample/index.html">sample</a></td>
-          <td class="summary"><p>Package sample is a fixture module for godoc2 tests.</p>`,
 		`<td><a href="sample/internal/secret/index.html">internal/secret</a> <span class="badge badge-internal" title="Importable only by packages rooted at the parent of the internal directory.">internal</span></td>`,
 		`<td><a href="sample/shapes/index.html">shapes</a></td>`,
 		`<td><a href="sample/empty/index.html">empty</a> <span class="badge badge-deprecated" title="Nothing lives here.">deprecated</span></td>`,
 		`<td><a href="sample/readme/index.html">readme</a></td>`,
 		`<td class="summary"><p>Package readme is documented by its README file.</p>`,
 		`<td class="summary"><p>Package indexed is documented by index.md.</p>`,
-		`<summary><a href="sample.html">sample</a></summary>`,
-		`<li><a href="sample/index.html">sample</a>
-  </li>`,
+		`<summary><a href="sample/index.html">sample</a></summary>`,
 		`<summary><span class="dir">internal</span></summary>`,
 		`<li><a href="sample/internal/secret/index.html">secret <span class="badge badge-internal" title="Importable only by packages rooted at the parent of the internal directory.">internal</span></a>
   </li>`,
@@ -118,6 +114,7 @@ func TestRenderer_Module_WithDocFile_ShowsDocFile(t *testing.T) {
 	wantFragments := fragments{
 		`<h1><span class="kind">module</span> example.com/bare</h1>`,
 		`<h1 id="bare">Bare</h1>`,
+		`<summary><span class="dir">bare</span></summary>`,
 		`<a href="bare/lib/index.html">lib</a>`,
 		`<a href="bare/lib/lib.go.html">its source</a>`,
 		`<td><a href="bare/lib/index.html">lib</a></td>`,

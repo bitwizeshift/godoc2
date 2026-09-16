@@ -132,13 +132,8 @@ type section struct {
 }
 
 type tableRow struct {
-	Name string
-	Href string
-
-	// Rel is the package path relative to the page, which places the row in
-	// the sidebar tree. It is empty for a root package row, and for the rows
-	// of other tables.
-	Rel        string
+	Name       string
+	Href       string
 	Internal   bool
 	Unexported bool
 	Deprecated string

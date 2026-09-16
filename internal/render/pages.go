@@ -60,7 +60,7 @@ func (b *builder) modulePage(mod *model.Module) *page {
 	pg.Heading = heading{Kind: "module", Name: mod.Path}
 	doc := b.moduleDoc(mod)
 	tools := b.toolsSection(mod)
-	packages := b.modulePackagesSection(mod)
+	packages := b.packagesSection(mod, "")
 	pg.Sections = appendSection(pg.Sections, b.docSection(doc))
 	pg.Sections = appendSection(pg.Sections, tools)
 	pg.Sections = appendSection(pg.Sections, packages)
@@ -160,25 +160,9 @@ func (b *builder) toolsSection(mod *model.Module) *section {
 	return &section{ID: "tools", Title: "Tools", Kind: kindTable, Rows: rows}
 }
 
-// modulePackagesSection lists every non-main package of mod. The root
-// package comes first under its package name.
-func (b *builder) modulePackagesSection(mod *model.Module) *section {
-	var rows []tableRow
-	if root := mod.Root(); root != nil {
-		rows = append(rows, b.packageRow(root, ""))
-	}
-	return packagesTable(append(rows, b.packageRows(mod, "")...))
-}
-
 // packagesSection lists the non-main packages of mod below rel, without the
-// package at rel itself.
+// package at rel itself. rel is empty for the module root.
 func (b *builder) packagesSection(mod *model.Module, rel string) *section {
-	return packagesTable(b.packageRows(mod, rel))
-}
-
-// packageRows returns the rows of the non-main packages of mod below rel,
-// without the package at rel itself.
-func (b *builder) packageRows(mod *model.Module, rel string) []tableRow {
 	prefix := ""
 	if rel != "" {
 		prefix = rel + "/"
@@ -190,30 +174,19 @@ func (b *builder) packageRows(mod *model.Module, rel string) []tableRow {
 		}
 		rows = append(rows, b.packageRow(p, strings.TrimPrefix(p.RelPath, prefix)))
 	}
-	return rows
-}
-
-// packagesTable returns the Packages section of rows, or nil when rows is
-// empty.
-func packagesTable(rows []tableRow) *section {
 	if len(rows) == 0 {
 		return nil
 	}
 	return &section{ID: "packages", Title: "Packages", Kind: kindTable, Rows: rows}
 }
 
-// packageRow returns the table row of p. rel is the package path relative to
-// the page, or empty for the root package, which is shown under its name.
-func (b *builder) packageRow(p *model.Package, rel string) tableRow {
+// packageRow returns the table row of p, named by its path relative to the
+// page.
+func (b *builder) packageRow(p *model.Package, name string) tableRow {
 	scoped := b.withPackage(p)
 	summary, _ := scoped.summaryAndFull(scoped.packageDoc(p))
-	name := rel
-	if name == "" {
-		name = p.DisplayName()
-	}
 	return tableRow{
 		Name:       name,
-		Rel:        rel,
 		Href:       b.rel(pathmap.Package(p.Module.Path, p.RelPath)),
 		Internal:   p.Internal(),
 		Deprecated: p.Deprecated(),
@@ -330,12 +303,11 @@ func (b *builder) fileItems(p *model.Package) []sidebarItem {
 }
 
 // packageTree turns the package rows into a tree under root. The root is
-// open and every package node is collapsed. A row with an empty relative
-// path, the root package, is a leaf directly under root.
+// open and every package node is collapsed.
 func packageTree(root *treeNode, rows []tableRow) []*treeNode {
 	root.Open = true
 	for _, row := range rows {
-		node := placeNode(root, row.Rel, row.Name)
+		node := placeNode(root, row.Name)
 		node.Href = row.Href
 		node.Internal = row.Internal
 		node.Deprecated = row.Deprecated
@@ -343,15 +315,9 @@ func packageTree(root *treeNode, rows []tableRow) []*treeNode {
 	return []*treeNode{root}
 }
 
-// placeNode returns the node at rel below root, creating the missing nodes.
-// Each node shows one path element. An empty rel appends a new child of
-// root that shows name.
-func placeNode(root *treeNode, rel, name string) *treeNode {
-	if rel == "" {
-		node := &treeNode{Text: name}
-		root.Children = append(root.Children, node)
-		return node
-	}
+// placeNode returns the node at the relative path rel below root, creating
+// the missing nodes. Each node shows one path element.
+func placeNode(root *treeNode, rel string) *treeNode {
 	node := root
 	for elem := range strings.SplitSeq(rel, "/") {
 		child := findNode(node.Children, elem)
@@ -374,14 +340,19 @@ func findNode(nodes []*treeNode, text string) *treeNode {
 }
 
 // treeSidebar returns the sidebar entry of a package table as a tree rooted
-// at the page package, or at the module when p is nil.
+// at the directory of the page. The root shows the directory name and links
+// to the package of that directory: p on a package page, or the root package
+// of mod on a module page. A directory without a package has no link.
 func (b *builder) treeSidebar(s *section, mod *model.Module, p *model.Package) *sidebarSection {
 	if s == nil {
 		return nil
 	}
-	root := &treeNode{Text: path.Base(mod.Path), Href: b.rel(pathmap.Module(mod.Path))}
+	root := &treeNode{Text: path.Base(mod.Path)}
+	if p == nil {
+		p = mod.Root()
+	}
 	if p != nil {
-		root.Text = p.DisplayName()
+		root.Text = path.Base(p.ImportPath)
 		root.Href = b.rel(pathmap.Package(mod.Path, p.RelPath))
 		root.Internal = p.Internal()
 		root.Deprecated = p.Deprecated()
