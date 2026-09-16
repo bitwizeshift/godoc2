@@ -63,7 +63,7 @@ func TestRenderer_Module(t *testing.T) {
 	sut := newRenderer(t)
 	mod := loadertest.SampleModule(t)
 	var out strings.Builder
-	wantSections := []string{"documentation", "tools", "packages", "examples", "constants", "errors", "variables", "types", "functions"}
+	wantSections := []string{"documentation", "tools", "packages", "examples", "constants", "errors", "variables", "interfaces", "types", "functions"}
 	wantFragments := fragments{
 		`<h1><span class="kind">package</span> sample</h1>`,
 		`<h3>Sentinel Errors</h3>
@@ -74,6 +74,20 @@ func TestRenderer_Module(t *testing.T) {
     <ul>
       <li><a href="#var.DefaultColor">DefaultColor</a></li>
     </ul>`,
+		`<h3>Interfaces</h3>
+    <ul>
+      <li><a href="#type.Named">Named</a></li>
+      <li><a href="#type.Namer">Namer</a></li>
+      <li><a href="#type.Shape">Shape</a></li>
+    </ul>`,
+		`<h3>Types</h3>
+    <ul>
+      <li><a href="#type.Big">Big</a></li>
+      <li><a href="#type.Circle">Circle</a></li>
+      <li><a href="#type.Color">Color</a></li>
+      <li><a href="#type.Counter">Counter</a></li>
+      <li><a href="#type.Grid">Grid</a></li>
+      <li><a href="#type.ID">ID</a></li>`,
 		`<a class="badge badge-module" href="index.html" title="example.com/sample">module</a>`,
 		`<td><a href="cmd/tool/index.html">tool</a></td>`,
 		`<td><a href="internal/secret/index.html">internal/secret</a> <span class="badge badge-internal" title="Importable only by packages rooted at the parent of the internal directory.">internal</span></td>`,
@@ -329,7 +343,7 @@ func TestRenderer_Package(t *testing.T) {
 		{
 			name:         "doc comment wins over README",
 			pkg:          loadertest.Package(t, "shapes"),
-			wantSections: []string{"documentation", "types", "functions"},
+			wantSections: []string{"documentation", "interfaces", "functions"},
 			wantFragments: fragments{
 				`<p>Package shapes declares interfaces satisfied by shapes.</p>`,
 			},

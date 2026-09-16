@@ -3,6 +3,7 @@ package render
 import (
 	"html/template"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/bitwizeshift/godoc2/internal/markdown"
@@ -108,38 +109,43 @@ func (b *builder) packagePage(p *model.Package) *page {
 }
 
 // addPackageMembers appends the Examples, Constants, Sentinel Errors,
-// Variables, Types, and Functions sections of p, or the
+// Variables, Interfaces, Types, and Functions sections of p, or the
 // no-exported-identifiers message when the package declares nothing and has
 // no tables. The Sentinel Errors section holds the variables of type error,
-// and the Variables section holds the other variables.
+// and the Variables section holds the other variables. The Interfaces
+// section holds the types whose underlying type is an interface, aliases
+// included, and the Types section holds the other types.
 func (b *builder) addPackageMembers(pg *page, p *model.Package, hasTables bool) {
-	errs, others := splitSentinelErrors(p.Vars)
+	errs, otherVars := partition(p.Vars, (*model.Value).SentinelError)
+	ifaces, otherTypes := partition(p.Types, (*model.Type).Interface)
 	examples := b.examplesSection(p.Examples)
 	consts := itemsSection("constants", "Constants", b.valueItems("const", p.Consts))
 	sentinels := itemsSection("errors", "Sentinel Errors", b.valueItems("var", errs))
-	vars := itemsSection("variables", "Variables", b.valueItems("var", others))
-	types := itemsSection("types", "Types", b.typeItems(p.Types))
+	vars := itemsSection("variables", "Variables", b.valueItems("var", otherVars))
+	interfaces := itemsSection("interfaces", "Interfaces", b.typeItems(ifaces))
+	types := itemsSection("types", "Types", b.typeItems(otherTypes))
 	funcs := itemsSection("functions", "Functions", b.funcItems("func", p.Funcs))
-	for _, s := range []*section{examples, consts, sentinels, vars, types, funcs} {
+	members := []*section{consts, sentinels, vars, interfaces, types, funcs}
+	for _, s := range append([]*section{examples}, members...) {
 		pg.Sections = appendSection(pg.Sections, s)
 		pg.Sidebar = appendSidebar(pg.Sidebar, sidebarOf(s))
 	}
-	if consts == nil && sentinels == nil && vars == nil && types == nil && funcs == nil && !hasTables {
+	if !hasTables && !slices.ContainsFunc(members, func(s *section) bool { return s != nil }) {
 		pg.Sections = append(pg.Sections, section{ID: "empty", Kind: kindMessage, Message: noExportedMessage})
 	}
 }
 
-// splitSentinelErrors divides vars into the variables of type error and the
-// rest, each in the given order.
-func splitSentinelErrors(vars []*model.Value) (errs, others []*model.Value) {
-	for _, v := range vars {
-		if v.SentinelError() {
-			errs = append(errs, v)
+// partition divides items into those accepted by match and the rest, each
+// in the given order.
+func partition[T any](items []T, match func(T) bool) (matched, rest []T) {
+	for _, it := range items {
+		if match(it) {
+			matched = append(matched, it)
 		} else {
-			others = append(others, v)
+			rest = append(rest, it)
 		}
 	}
-	return errs, others
+	return matched, rest
 }
 
 // toolsSection lists the main packages of mod.

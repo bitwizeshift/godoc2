@@ -211,3 +211,6 @@ var origin = newPoint()
 const maxPoints = 8
 
 func init() {}
+
+// Namer is an alias of [Named].
+type Namer = Named

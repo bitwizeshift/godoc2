@@ -281,6 +281,16 @@ func (t *Type) Deprecated() string {
 	return Deprecation(t.Doc)
 }
 
+// Interface reports whether the underlying type of t is an interface. An
+// alias of an interface type is an interface as well.
+func (t *Type) Interface() bool {
+	if t.Obj == nil {
+		return t.Kind == KindInterface
+	}
+	_, ok := types.Unalias(t.Obj.Type()).Underlying().(*types.Interface)
+	return ok
+}
+
 // Exported reports whether the type name is exported.
 func (t *Type) Exported() bool {
 	return token.IsExported(t.Name)
