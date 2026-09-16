@@ -343,10 +343,9 @@ func findNode(nodes []*treeNode, text string) *treeNode {
 // at the directory of the page. The root shows the directory name and links
 // to the package of that directory: p on a package page, or the root package
 // of mod on a module page. A directory without a package has no link.
+// s is nil when the page has no sub-packages, and the tree is then the root
+// alone.
 func (b *builder) treeSidebar(s *section, mod *model.Module, p *model.Package) *sidebarSection {
-	if s == nil {
-		return nil
-	}
 	root := &treeNode{Text: path.Base(mod.Path)}
 	if p == nil {
 		p = mod.Root()
@@ -357,5 +356,12 @@ func (b *builder) treeSidebar(s *section, mod *model.Module, p *model.Package) *
 		root.Internal = p.Internal()
 		root.Deprecated = p.Deprecated()
 	}
-	return &sidebarSection{Title: s.Title, Href: "#" + s.ID, Tree: packageTree(root, s.Rows)}
+	entry := &sidebarSection{Title: "Packages"}
+	var rows []tableRow
+	if s != nil {
+		entry.Href = "#" + s.ID
+		rows = s.Rows
+	}
+	entry.Tree = packageTree(root, rows)
+	return entry
 }

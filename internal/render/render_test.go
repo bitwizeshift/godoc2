@@ -314,6 +314,11 @@ func TestRenderer_Package(t *testing.T) {
 			wantFragments: fragments{
 				`<h1><span class="kind">package</span> empty <span class="badge badge-deprecated" title="Nothing lives here.">deprecated</span></h1>`,
 				`<p class="message" id="empty">This package has no exported identifiers.</p>`,
+				`<h3>Packages</h3>`,
+				`<ul class="tree">
+  <li><a href="index.html">empty <span class="badge badge-deprecated" title="Nothing lives here.">deprecated</span></a>
+  </li>
+</ul>`,
 				`<span class="sep">/</span><a href="index.html">empty</a>`,
 			},
 		},
