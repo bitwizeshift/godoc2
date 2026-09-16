@@ -201,13 +201,13 @@ func (b *builder) typePage(t *model.Type) *page {
 	pg.Breadcrumb = b.breadcrumb(t.Pkg.Module, t.Pkg, crumb{Text: t.Name, Href: ""})
 	pg.Heading = heading{Kind: t.Kind.String(), Name: t.Name, Internal: t.Pkg.Internal(), Unexported: !t.Exported(), Deprecated: t.Deprecated()}
 	pg.SourceHref = b.sourceHref(t.Spec)
+	pg.Badges = props.Badges(t)
 	pg.Definition = b.code(b.printer("").Type(t))
 
 	idx := b.r.index
 	sections := []*section{
 		b.docSection(b.doc(t.Doc)),
 		b.examplesSection(t.Examples),
-		badgesSection(props.Badges(t)),
 		itemsSection("fields", "Fields", b.fieldItems(t.Fields)),
 		itemsSection("instances", "Instances", b.valueItems("instance", idx.Instances(t))),
 		b.funcGroupsSection("constructors", "Constructors", "ctor", idx.Constructors(t)),
@@ -228,13 +228,6 @@ func (b *builder) typePage(t *model.Type) *page {
 		}
 	}
 	return pg
-}
-
-func badgesSection(badges []props.Badge) *section {
-	if len(badges) == 0 {
-		return nil
-	}
-	return &section{ID: "properties", Title: "Properties", Kind: kindBadges, Badges: badges}
 }
 
 // funcPage builds the page of a function or method.

@@ -85,6 +85,13 @@
     {{- if .Definition}}
     <div class="definition">{{.Definition}}</div>
     {{- end}}
+    {{- if .Badges}}
+    <ul class="badges">
+      {{- range .Badges}}
+      <li class="badge badge-prop{{if eq .Label "internal"}} badge-internal{{end}}"{{with badgeTitle .Label}} title="{{.}}"{{end}}><span class="badge-label">{{.Label}}</span>{{if .Value}} <span class="badge-value">{{.Value}}</span>{{end}}</li>
+      {{- end}}
+    </ul>
+    {{- end}}
     {{- range .Sections}}
     {{- if eq .Kind "message"}}
     <p class="message" id="{{.ID}}">{{.Message}}</p>
@@ -92,10 +99,12 @@
     <div class="source" id="{{.ID}}">{{.HTML}}</div>
     {{- else}}
     <section class="section" id="{{.ID}}">
-      <h2><a class="anchor" href="#{{.ID}}">{{.Title}}</a></h2>
       {{- if eq .Kind "doc"}}
       <div class="docblock">{{.HTML}}</div>
-      {{- else if eq .Kind "table"}}
+      {{- else}}
+      <h2><a class="anchor" href="#{{.ID}}">{{.Title}}</a></h2>
+      {{- end}}
+      {{- if eq .Kind "table"}}
       <table class="item-table">
         {{- range .Rows}}
         <tr>
@@ -104,12 +113,6 @@
         </tr>
         {{- end}}
       </table>
-      {{- else if eq .Kind "badges"}}
-      <ul class="badges">
-        {{- range .Badges}}
-        <li class="badge badge-prop{{if eq .Label "internal"}} badge-internal{{end}}"{{with badgeTitle .Label}} title="{{.}}"{{end}}><span class="badge-label">{{.Label}}</span>{{if .Value}} <span class="badge-value">{{.Value}}</span>{{end}}</li>
-        {{- end}}
-      </ul>
       {{- else if eq .Kind "examples"}}
       {{- range .Examples}}
       <details class="item" id="{{.ID}}" open>

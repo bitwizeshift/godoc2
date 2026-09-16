@@ -374,7 +374,7 @@ func TestRenderer_Type(t *testing.T) {
 		{
 			name:         "struct",
 			typ:          loadertest.Type(t, "", "Circle"),
-			wantSections: []string{"documentation", "examples", "properties", "fields", "constructors", "methods", "utilities", "implements"},
+			wantSections: []string{"documentation", "examples", "fields", "constructors", "methods", "utilities", "implements"},
 			wantFragments: fragments{
 				`<h1><span class="kind">struct</span> Circle</h1>`,
 				`<a class="src" href="sample.go.html#L44">source</a>`,
@@ -412,7 +412,7 @@ func TestRenderer_Type(t *testing.T) {
 		{
 			name:         "struct with embedded and shared fields",
 			typ:          loadertest.Type(t, "", "Label"),
-			wantSections: []string{"documentation", "properties", "fields", "implements"},
+			wantSections: []string{"documentation", "fields", "implements"},
 			wantFragments: fragments{
 				`<details class="item" id="field.Reader" open>`,
 				`<span class="badge badge-embedded" title="Embedded in the struct. Its fields and methods are promoted to the struct.">embedded</span>`,
@@ -430,7 +430,7 @@ func TestRenderer_Type(t *testing.T) {
 		{
 			name:         "interface",
 			typ:          loadertest.Type(t, "", "Named"),
-			wantSections: []string{"documentation", "properties", "constructors", "implementations"},
+			wantSections: []string{"documentation", "constructors", "implementations"},
 			wantFragments: fragments{
 				`<h1><span class="kind">interface</span> Named</h1>`,
 				`<details class="item" id="ctor.NewCircle" open>`,
@@ -447,7 +447,7 @@ func TestRenderer_Type(t *testing.T) {
 		{
 			name:         "sealed interface",
 			typ:          loadertest.Type(t, "", "Shape"),
-			wantSections: []string{"documentation", "properties", "constructors", "implementations"},
+			wantSections: []string{"documentation", "constructors", "implementations"},
 			wantFragments: fragments{
 				`<span class="badge-label">sealed</span>`,
 				`// contains unexported methods`,
@@ -456,7 +456,7 @@ func TestRenderer_Type(t *testing.T) {
 		{
 			name:         "enum with instances",
 			typ:          loadertest.Type(t, "", "Color"),
-			wantSections: []string{"documentation", "properties", "instances", "utilities"},
+			wantSections: []string{"documentation", "instances", "utilities"},
 			wantFragments: fragments{
 				`<li class="badge badge-prop" title="Values can be compared with &lt;, &lt;=, &gt;, and &gt;=."><span class="badge-label">ordered</span></li>`,
 				`<details class="item" id="instance.Red" open>`,
@@ -466,7 +466,7 @@ func TestRenderer_Type(t *testing.T) {
 		{
 			name:         "internal type",
 			typ:          loadertest.Type(t, "internal/secret", "Token"),
-			wantSections: []string{"documentation", "properties", "fields"},
+			wantSections: []string{"documentation", "fields"},
 			wantFragments: fragments{
 				`<h1><span class="kind">struct</span> Token <span class="badge badge-internal" title="Importable only by packages rooted at the parent of the internal directory.">internal</span></h1>`,
 				`<span class="badge-label">internal</span>`,

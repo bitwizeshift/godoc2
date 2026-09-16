@@ -23,6 +23,10 @@ type page struct {
 	Sidebar    []sidebarSection
 	Heading    heading
 	SourceHref string
+
+	// Badges are the properties of a type, shown between the heading and the
+	// definition.
+	Badges     []props.Badge
 	Definition template.HTML
 	Sections   []section
 }
@@ -95,7 +99,6 @@ const (
 	kindDoc       = "doc"
 	kindTable     = "table"
 	kindItems     = "items"
-	kindBadges    = "badges"
 	kindExamples  = "examples"
 	kindRelations = "relations"
 	kindMessage   = "message"
@@ -111,7 +114,6 @@ type section struct {
 	HTML     template.HTML
 	Rows     []tableRow
 	Items    []item
-	Badges   []props.Badge
 	Examples []example
 	Groups   []relationGroup
 	Message  string
