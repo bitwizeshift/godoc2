@@ -125,13 +125,18 @@ func (w *writer) linked(text, url string) {
 	}
 }
 
-// urlOf resolves the object an identifier refers to.
+// urlOf resolves the object an identifier refers to, or else the object it
+// declares. The receiver of an interface method is the declaring identifier
+// of its type, and the name of an interface method declares the method.
 func (w *writer) urlOf(id *ast.Ident) string {
 	p := w.printer
 	if p.Pkg == nil || p.Pkg.Info == nil || p.Resolver == nil {
 		return ""
 	}
 	obj := p.Pkg.Info.Uses[id]
+	if obj == nil {
+		obj = p.Pkg.Info.Defs[id]
+	}
 	if obj == nil {
 		return ""
 	}
@@ -450,7 +455,7 @@ func (w *writer) interfaceMember(f *ast.Field) {
 		w.expr(f.Type)
 		return
 	}
-	w.str(f.Names[0].Name)
+	w.linked(f.Names[0].Name, w.urlOf(f.Names[0]))
 	if ft, ok := f.Type.(*ast.FuncType); ok {
 		w.funcType(ft, false)
 		return

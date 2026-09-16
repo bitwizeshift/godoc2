@@ -239,15 +239,11 @@ func (b *builder) typePage(t *model.Type) *page {
 		itemsSection("fields", "Fields", b.fieldItems(t.Fields)),
 		itemsSection("instances", "Instances", b.valueItems("instance", idx.Instances(t))),
 		b.funcGroupsSection("constructors", "Constructors", "ctor", idx.Constructors(t)),
-	}
-	if t.Kind != model.KindInterface {
-		sections = append(sections, itemsSection("methods", "Methods", b.funcItems("method", t.Methods)))
-	}
-	sections = append(sections,
+		itemsSection("methods", "Methods", b.funcItems("method", t.Methods)),
 		b.funcGroupsSection("utilities", "Utilities", "util", idx.Utilities(t)),
 		b.relationSection("implements", "Implements", relate.Groups(idx.Implements(t), t), t),
 		b.relationSection("implementations", "Implementations", relate.Groups(idx.Implementations(t), t), t),
-	)
+	}
 	pg.Sidebar = appendSidebar(pg.Sidebar, new(b.docSidebar(b.doc(t.Doc))))
 	for _, s := range sections {
 		pg.Sections = appendSection(pg.Sections, s)

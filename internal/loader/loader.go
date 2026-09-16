@@ -384,10 +384,83 @@ func (c *converter) typ(t *doc.Type) *model.Type {
 		Examples: c.examples(t.Examples),
 		Pkg:      c.pkg,
 	}
-	mt.Methods = c.funcs(t.Methods, mt)
+	mt.Methods = append(c.funcs(t.Methods, mt), c.interfaceMethods(mt)...)
 	sortByName(mt.Methods, func(f *model.Func) string { return f.Name })
 	mt.Fields = c.fields(mt)
 	return mt
+}
+
+// interfaceMethods lists the documented methods declared in the body of an
+// interface type. Each one carries a declaration with the interface as its
+// receiver, so it renders and links like a concrete method. Methods of
+// embedded interfaces are not included.
+func (c *converter) interfaceMethods(t *model.Type) []*model.Func {
+	if t.Spec == nil {
+		return nil
+	}
+	it, ok := t.Spec.Type.(*ast.InterfaceType)
+	if !ok || it.Methods == nil {
+		return nil
+	}
+	var result []*model.Func
+	for _, f := range it.Methods.List {
+		ft, ok := f.Type.(*ast.FuncType)
+		if !ok || len(f.Names) == 0 || !c.documented(f.Names[0].Name) {
+			continue
+		}
+		name := f.Names[0]
+		result = append(result, &model.Func{
+			Name: name.Name,
+			Doc:  fieldDoc(f),
+			Decl: &ast.FuncDecl{
+				Doc:  f.Doc,
+				Recv: &ast.FieldList{List: []*ast.Field{{Type: receiverExpr(t.Spec)}}},
+				Name: name,
+				Type: ft,
+			},
+			Obj:  c.interfaceMethod(t, name.Name),
+			Recv: t,
+			Pkg:  c.pkg,
+		})
+	}
+	return result
+}
+
+// interfaceMethod finds the type-checker object of a method declared in the
+// body of the interface type t.
+func (c *converter) interfaceMethod(t *model.Type, name string) *types.Func {
+	if t.Obj == nil {
+		return nil
+	}
+	iface, ok := t.Obj.Type().Underlying().(*types.Interface)
+	if !ok {
+		return nil
+	}
+	for m := range iface.ExplicitMethods() {
+		if m.Name() == name {
+			return m
+		}
+	}
+	return nil
+}
+
+// receiverExpr returns the receiver type expression of a method of the type
+// declared by spec: its name, instantiated with its type parameters when it
+// has any.
+func receiverExpr(spec *ast.TypeSpec) ast.Expr {
+	if spec.TypeParams == nil {
+		return spec.Name
+	}
+	var params []ast.Expr
+	for _, f := range spec.TypeParams.List {
+		for _, n := range f.Names {
+			params = append(params, n)
+		}
+	}
+	if len(params) == 1 {
+		return &ast.IndexExpr{X: spec.Name, Index: params[0]}
+	}
+	return &ast.IndexListExpr{X: spec.Name, Indices: params}
 }
 
 // fields lists the documented fields of a struct type in declaration order.

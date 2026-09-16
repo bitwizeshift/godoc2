@@ -469,9 +469,11 @@ func TestRenderer_Type(t *testing.T) {
 		{
 			name:         "interface",
 			typ:          loadertest.Type(t, "", "Named"),
-			wantSections: []string{"documentation", "constructors", "implementations"},
+			wantSections: []string{"documentation", "constructors", "methods", "implementations"},
 			wantFragments: fragments{
 				`<h1><span class="kind">interface</span> Named</h1>`,
+				`<details class="item" id="method.Name" open>`,
+				`<a href="Named.Name.html"><span class="nf">Name</span></a>`,
 				`<details class="item" id="ctor.NewCircle" open>`,
 				`<details class="item" id="ctor.NewUnit" open>`,
 				`<li><a href="#implementations.example.com/sample.Circle">Circle</a></li>`,
@@ -486,7 +488,7 @@ func TestRenderer_Type(t *testing.T) {
 		{
 			name:         "sealed interface",
 			typ:          loadertest.Type(t, "", "Shape"),
-			wantSections: []string{"documentation", "constructors", "implementations"},
+			wantSections: []string{"documentation", "constructors", "methods", "implementations"},
 			wantFragments: fragments{
 				`<span class="badge-label">sealed</span>`,
 				`// contains unexported methods`,
@@ -684,6 +686,17 @@ func TestRenderer_Func(t *testing.T) {
 			wantFragments: fragments{
 				`<h1><span class="kind">func</span> Area</h1>`,
 				`<span class="sep">.</span><a href="Circle.html">Circle</a><span class="sep">.</span><span class="crumb">Area</span>`,
+			},
+		},
+		{
+			name:         "interface method",
+			fn:           loadertest.Method(t, "", "Shape", "Area"),
+			wantSections: []string{"documentation"},
+			wantFragments: fragments{
+				`<h1><span class="kind">func</span> Area</h1>`,
+				`<span class="sep">.</span><a href="Shape.html">Shape</a><span class="sep">.</span><span class="crumb">Area</span>`,
+				`<a class="src" href="sample.go.html#L12">source</a>`,
+				`<p>Area returns the surface area.</p>`,
 			},
 		},
 	}

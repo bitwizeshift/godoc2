@@ -58,6 +58,17 @@ func TestPrinter_Func(t *testing.T) {
 			},
 		},
 		{
+			name: "interface method",
+			fn:   loadertest.Method(t, "", "Shape", "Area"),
+			want: sig.Rendered{
+				Text: "func (Shape) Area() float64",
+				Links: []sig.Span{
+					{Start: 6, End: 11, URL: "Shape.html"},
+					{Start: 20, End: 27, URL: builtin + "float64"},
+				},
+			},
+		},
+		{
 			name: "external parameter and error result",
 			fn:   loadertest.Func(t, "", "Describe"),
 			want: sig.Rendered{
@@ -182,6 +193,7 @@ func TestPrinter_Type(t *testing.T) {
 					"\t// contains unexported methods\n" +
 					"}",
 				Links: []sig.Span{
+					{Start: 24, End: 28, URL: "Shape.Area.html"},
 					{Start: 31, End: 38, URL: builtin + "float64"},
 				},
 			},
@@ -194,6 +206,7 @@ func TestPrinter_Type(t *testing.T) {
 					"\tName() string\n" +
 					"}",
 				Links: []sig.Span{
+					{Start: 24, End: 28, URL: "Named.Name.html"},
 					{Start: 31, End: 37, URL: builtin + "string"},
 				},
 			},
