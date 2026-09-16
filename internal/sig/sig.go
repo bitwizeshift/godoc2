@@ -396,21 +396,102 @@ func (w *writer) typeSpec(s *ast.TypeSpec) {
 // them.
 func (w *writer) structType(t *ast.StructType) {
 	w.str("struct {")
-	var members []func()
+	var lines []structLine
 	hidden := t.Incomplete
 	for _, f := range fields(t.Fields) {
-		if !w.visible(f) {
-			hidden = true
+		if len(f.Names) == 0 {
+			if !w.visible(f) {
+				hidden = true
+				continue
+			}
+			lines = append(lines, structLine{field: f})
 			continue
 		}
-		members = append(members, func() { w.structField(f) })
+		for _, n := range f.Names {
+			if !w.printer.Unexported && !n.IsExported() {
+				hidden = true
+				continue
+			}
+			lines = append(lines, structLine{name: n.Name, field: f})
+		}
 	}
-	w.block(members, hidden, "// contains unexported fields")
+	cols := w.structColumns(lines)
+	var members []func()
+	for _, l := range lines {
+		members = append(members, func() { w.structField(l, cols) })
+	}
+	w.block(members, hidden, "// contains unexported fields", false)
 }
 
-func (w *writer) structField(f *ast.Field) {
-	w.field(f)
-	w.tag(f)
+// structLine is one written line of a struct: a single name of a field, or
+// an embedded field with an empty name.
+type structLine struct {
+	name  string
+	field *ast.Field
+}
+
+// structColumns holds the columns that the fields of one struct align to:
+// the column of the type and the column of the tag.
+type structColumns struct {
+	typ int
+	tag int
+}
+
+// structColumns measures the columns of lines. The type column follows the
+// widest name. The tag column follows the widest line that has a tag.
+func (w *writer) structColumns(lines []structLine) structColumns {
+	var cols structColumns
+	for _, l := range lines {
+		cols.typ = max(cols.typ, utf8.RuneCountInString(l.name)+1)
+	}
+	for _, l := range lines {
+		if l.field.Tag != nil {
+			cols.tag = max(cols.tag, w.measure(func(m *writer) { m.nameAndType(l, cols) })+1)
+		}
+	}
+	return cols
+}
+
+// structField writes one line aligned to cols: the name, the type at the
+// type column, and the tag at the tag column. An embedded field starts at
+// the name column.
+func (w *writer) structField(l structLine, cols structColumns) {
+	w.nameAndType(l, cols)
+	if l.field.Tag != nil {
+		w.pad(cols.tag)
+		w.str(l.field.Tag.Value)
+	}
+}
+
+func (w *writer) nameAndType(l structLine, cols structColumns) {
+	if l.name != "" {
+		w.str(l.name)
+		w.pad(cols.typ)
+	}
+	w.expr(l.field.Type)
+}
+
+// pad writes spaces until the current line reaches column col, or one
+// space when the line is already past it.
+func (w *writer) pad(col int) {
+	n := max(col-w.lineWidth(), 1)
+	w.str(strings.Repeat(" ", n))
+}
+
+// lineWidth returns the width of the current line without its indentation.
+func (w *writer) lineWidth() int {
+	text := w.buf.String()
+	if i := strings.LastIndexByte(text, '\n'); i >= 0 {
+		text = text[i+1:]
+	}
+	return utf8.RuneCountInString(strings.TrimLeft(text, "\t"))
+}
+
+// measure returns the width of the text that fn writes to an empty writer.
+func (w *writer) measure(fn func(*writer)) int {
+	m := w.printer.writer()
+	fn(m)
+	return m.width()
 }
 
 // fieldDecl writes one named field of a struct: the name, type, and tag. An
@@ -447,7 +528,7 @@ func (w *writer) interfaceType(t *ast.InterfaceType) {
 		}
 		members = append(members, func() { w.interfaceMember(f) })
 	}
-	w.block(members, hidden, "// contains unexported methods")
+	w.block(members, hidden, "// contains unexported methods", true)
 }
 
 func (w *writer) interfaceMember(f *ast.Field) {
@@ -463,23 +544,24 @@ func (w *writer) interfaceMember(f *ast.Field) {
 	w.expr(f.Type)
 }
 
-// block writes members separated by blank lines inside braces, followed by
-// the hidden comment when any member was omitted.
-func (w *writer) block(members []func(), hidden bool, comment string) {
+// block writes members one per line inside braces, followed by the hidden
+// comment when any member was omitted. spaced separates the lines with
+// blank lines.
+func (w *writer) block(members []func(), hidden bool, comment string, spaced bool) {
 	if len(members) == 0 && !hidden {
 		w.str("}")
 		return
 	}
 	w.indent++
 	for i, member := range members {
-		if i > 0 {
+		if i > 0 && spaced {
 			w.blank()
 		}
 		w.newline()
 		member()
 	}
 	if hidden {
-		if len(members) > 0 {
+		if len(members) > 0 && spaced {
 			w.blank()
 		}
 		w.newline()

@@ -58,9 +58,7 @@ func TestPrinter_Object(t *testing.T) {
 			want: sig.Rendered{
 				Text: "type Circle struct {\n" +
 					"\tRadius float64\n" +
-					"\n" +
-					"\tColor Color\n" +
-					"\n" +
+					"\tColor  Color\n" +
 					"\t// contains unexported fields\n" +
 					"}",
 				Links: []sig.Span{

@@ -172,14 +172,35 @@ func TestPrinter_Type(t *testing.T) {
 			want: sig.Rendered{
 				Text: "type Circle struct {\n" +
 					"\tRadius float64\n" +
-					"\n" +
-					"\tColor Color\n" +
-					"\n" +
+					"\tColor  Color\n" +
 					"\t// contains unexported fields\n" +
 					"}",
 				Links: []sig.Span{
 					{Start: 29, End: 36, URL: builtin + "float64"},
 					{Start: 45, End: 50, URL: "Color.html"},
+				},
+			},
+		},
+		{
+			name: "struct with embedded field, name list, and tag",
+			typ:  loadertest.Type(t, "", "Label"),
+			want: sig.Rendered{
+				Text: "type Label struct {\n" +
+					"\tio.Reader\n" +
+					"\tText   string\n" +
+					"\tWidth  int\n" +
+					"\tHeight int\n" +
+					"\tFont   string `json:\"font\"`\n" +
+					"\tLegacy string\n" +
+					"\t// contains unexported fields\n" +
+					"}",
+				Links: []sig.Span{
+					{Start: 21, End: 30, URL: "https://pkg.go.dev/io#Reader"},
+					{Start: 39, End: 45, URL: builtin + "string"},
+					{Start: 54, End: 57, URL: builtin + "int"},
+					{Start: 66, End: 69, URL: builtin + "int"},
+					{Start: 78, End: 84, URL: builtin + "string"},
+					{Start: 107, End: 113, URL: builtin + "string"},
 				},
 			},
 		},

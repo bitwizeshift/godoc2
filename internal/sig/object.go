@@ -2,6 +2,7 @@ package sig
 
 import (
 	"go/types"
+	"unicode/utf8"
 )
 
 // Object renders the declaration of a type from its type-checker object,
@@ -194,31 +195,59 @@ func (w *writer) typeParamList(tps *types.TypeParamList) {
 	w.str("]")
 }
 
-// structObj writes the exported fields of a struct type, one per line.
+// structObj writes the exported fields of a struct type, one per line, with
+// the types and the tags aligned.
 func (w *writer) structObj(t *types.Struct) {
 	w.str("struct {")
-	var members []func()
+	var visible []int
 	hidden := false
-	for f := range t.Fields() {
-		if !f.Exported() {
+	for i := range t.NumFields() {
+		if !t.Field(i).Exported() {
 			hidden = true
 			continue
 		}
-		members = append(members, func() { w.fieldObj(f, t) })
+		visible = append(visible, i)
 	}
-	w.block(members, hidden, "// contains unexported fields")
+	cols := w.structObjColumns(t, visible)
+	var members []func()
+	for _, i := range visible {
+		members = append(members, func() { w.fieldObj(t, i, cols) })
+	}
+	w.block(members, hidden, "// contains unexported fields", false)
 }
 
-func (w *writer) fieldObj(f *types.Var, t *types.Struct) {
-	if !f.Embedded() {
-		w.str(f.Name() + " ")
-	}
-	w.typ(f.Type())
-	for i := range t.NumFields() {
-		if t.Field(i) == f && t.Tag(i) != "" {
-			w.str(" `" + t.Tag(i) + "`")
+// structObjColumns measures the columns of the fields of t at the given
+// indices, as [writer.structColumns] does for a syntax tree.
+func (w *writer) structObjColumns(t *types.Struct, indices []int) structColumns {
+	var cols structColumns
+	for _, i := range indices {
+		if f := t.Field(i); !f.Embedded() {
+			cols.typ = max(cols.typ, utf8.RuneCountInString(f.Name())+1)
 		}
 	}
+	for _, i := range indices {
+		if t.Tag(i) != "" {
+			cols.tag = max(cols.tag, w.measure(func(m *writer) { m.nameAndTypeObj(t.Field(i), cols) })+1)
+		}
+	}
+	return cols
+}
+
+// fieldObj writes the field of t at index i aligned to cols.
+func (w *writer) fieldObj(t *types.Struct, i int, cols structColumns) {
+	w.nameAndTypeObj(t.Field(i), cols)
+	if tag := t.Tag(i); tag != "" {
+		w.pad(cols.tag)
+		w.str("`" + tag + "`")
+	}
+}
+
+func (w *writer) nameAndTypeObj(f *types.Var, cols structColumns) {
+	if !f.Embedded() {
+		w.str(f.Name())
+		w.pad(cols.typ)
+	}
+	w.typ(f.Type())
 }
 
 // interfaceObj writes the exported methods and embedded interfaces of an
@@ -238,7 +267,7 @@ func (w *writer) interfaceObj(t *types.Interface) {
 		}
 		members = append(members, func() { w.methodObj(m) })
 	}
-	w.block(members, hidden, "// contains unexported methods")
+	w.block(members, hidden, "// contains unexported methods", true)
 }
 
 func (w *writer) methodObj(m *types.Func) {
@@ -280,11 +309,11 @@ func (w *writer) inlineStruct(t *types.Struct) {
 		return
 	}
 	w.str("struct{ ")
-	for i, f := range enumerate(t.Fields()) {
+	for i := range t.NumFields() {
 		if i > 0 {
 			w.str("; ")
 		}
-		w.fieldObj(f, t)
+		w.fieldObj(t, i, structColumns{})
 	}
 	w.str(" }")
 }
