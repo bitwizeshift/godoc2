@@ -56,22 +56,24 @@ func NewResolver(site *model.Site) *Resolver {
 // Resolve maps dest, a link destination written in f, to an href from the
 // page at the output path from.
 //
-// A link to a module or package directory returns the href of its page. A
-// link to a Go source file returns the href of its source page. A link to
-// another file inside a module, or inside the site directory, returns the
-// href of a copy of the file, which [Resolver.Assets] then lists. Any
-// fragment is kept. Every other destination is returned unchanged.
+// A link to a package directory returns the href of its package page. A link
+// to a module directory without a root package returns the href of its
+// module page. A link to a Go source file returns the href of its source
+// page. A link to another file inside a module, or inside the site
+// directory, returns the href of a copy of the file, which [Resolver.Assets]
+// then lists. Any fragment is kept. Every other destination is returned
+// unchanged.
 func (r *Resolver) Resolve(f *model.DocFile, from, dest string) string {
 	target, fragment, ok := splitDest(dest)
 	if !ok {
 		return dest
 	}
 	abs := filepath.Join(filepath.Dir(f.Path), filepath.FromSlash(target))
-	if mod, ok := r.modules[abs]; ok {
-		return pathmap.Rel(from, pathmap.Module(mod.Path)) + fragment
-	}
 	if p, ok := r.packages[abs]; ok {
 		return pathmap.Rel(from, pathmap.Package(p.Module.Path, p.RelPath)) + fragment
+	}
+	if mod, ok := r.modules[abs]; ok {
+		return pathmap.Rel(from, pathmap.Module(mod.Path)) + fragment
 	}
 	if page, ok := r.sources[abs]; ok {
 		return pathmap.Rel(from, page) + fragment

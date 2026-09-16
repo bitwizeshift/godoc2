@@ -128,12 +128,8 @@ func Load(ctx context.Context, cfg Config) (*model.Site, error) {
 	return site, nil
 }
 
-// moduleDocFile attaches the Markdown file of the module root when no
-// package lives there.
+// moduleDocFile attaches the Markdown file of the module root directory.
 func moduleDocFile(mod *model.Module) error {
-	if mod.Root() != nil {
-		return nil
-	}
 	f, err := docfile.Find(mod.Dir)
 	if err != nil {
 		return fmt.Errorf("%w: %s: %w", ErrLoad, mod.Path, err)

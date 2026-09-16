@@ -149,19 +149,10 @@ func (r *run) assets() error {
 }
 
 // modulePages writes the module page of mod and then the pages of each of
-// its packages, one stage per package. The module page is also the page of
-// the root package when the module has one.
+// its packages, one stage per package.
 func (r *run) modulePages(mod *model.Module) error {
 	stage := "Writing module " + mod.Path
 	r.reporter.Stage(stage)
-	if root := mod.Root(); root != nil {
-		r.search.Add(search.Entry{
-			Name:    root.ImportPath,
-			Kind:    "package",
-			Package: root.ImportPath,
-			Path:    pathmap.Module(mod.Path),
-		})
-	}
 	err := r.write(pathmap.Module(mod.Path), func(w io.Writer) error {
 		return r.renderer.Module(w, mod)
 	})
@@ -181,18 +172,12 @@ func (r *run) modulePages(mod *model.Module) error {
 // packagePages writes the package page, every symbol page, and every source
 // page of p.
 func (r *run) packagePages(p *model.Package) error {
-	if p.RelPath != "" {
-		r.search.Add(search.Entry{
-			Name:    p.ImportPath,
-			Kind:    "package",
-			Package: p.ImportPath,
-			Path:    pathmap.Package(p.Module.Path, p.RelPath),
-		})
-		if err := r.write(pathmap.Package(p.Module.Path, p.RelPath), func(w io.Writer) error {
-			return r.renderer.Package(w, p)
-		}); err != nil {
-			return err
-		}
+	path := pathmap.Package(p.Module.Path, p.RelPath)
+	r.search.Add(search.Entry{Name: p.ImportPath, Kind: "package", Package: p.ImportPath, Path: path})
+	if err := r.write(path, func(w io.Writer) error {
+		return r.renderer.Package(w, p)
+	}); err != nil {
+		return err
 	}
 	for _, t := range p.Types {
 		if err := r.typePages(t); err != nil {

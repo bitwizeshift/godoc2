@@ -44,6 +44,7 @@
       {{- range .Breadcrumb}}
       {{- if .Separator}}<span class="sep">{{.Separator}}</span>{{end}}
       {{- if .Badge}}<a class="badge badge-module" href="{{.Href}}"{{with .Title}} title="{{.}}"{{end}}>{{.Text}}</a>
+      {{- else if .Root}} <span class="crumb">(</span><a href="{{.Href}}">{{.Text}}</a><span class="crumb">)</span>
       {{- else if .Href}}<a href="{{.Href}}">{{.Text}}</a>
       {{- else}}<span class="crumb">{{.Text}}</span>{{end}}
       {{- end}}

@@ -144,7 +144,7 @@ func TestResolver_Resolve_WithSiteDocFile(t *testing.T) {
 		{
 			name: "module without root package",
 			dest: "beta",
-			want: "example.com/multi/beta/index.html",
+			want: "example.com/multi/beta.html",
 		},
 		{
 			name: "own directory is the root module",

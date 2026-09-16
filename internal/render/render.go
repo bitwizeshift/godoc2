@@ -87,12 +87,10 @@ func (r *Renderer) Root(w io.Writer) error {
 	return r.execute(w, b.rootPage())
 }
 
-// Module writes the page of mod, which is also the page of its root package
-// when the module has one.
+// Module writes the page of mod.
 func (r *Renderer) Module(w io.Writer, mod *model.Module) error {
-	root := mod.Root()
-	b := r.builder(pathmap.Module(mod.Path), root)
-	return r.execute(w, b.modulePage(mod, root))
+	b := r.builder(pathmap.Module(mod.Path), nil)
+	return r.execute(w, b.modulePage(mod))
 }
 
 // Package writes the page of p.

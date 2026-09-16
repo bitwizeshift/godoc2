@@ -29,7 +29,7 @@ func TestModule(t *testing.T) {
 	p := pathmap.Module(module)
 
 	// Assert
-	if got, want := p, "github.com/example/mod/index.html"; !cmp.Equal(got, want) {
+	if got, want := p, "github.com/example/mod.html"; !cmp.Equal(got, want) {
 		t.Errorf("Module(...) = %q, want %q", got, want)
 	}
 }

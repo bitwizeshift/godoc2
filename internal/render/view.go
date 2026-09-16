@@ -51,6 +51,10 @@ type crumb struct {
 	// Separator precedes the element: "/" between directories, "." between
 	// symbols, or empty for the first element.
 	Separator string
+
+	// Root marks the crumb of the root package, which follows the module
+	// badge after a space, with its link in parentheses.
+	Root bool
 }
 
 type sidebarSection struct {
@@ -120,8 +124,13 @@ type section struct {
 }
 
 type tableRow struct {
-	Name       string
-	Href       string
+	Name string
+	Href string
+
+	// Rel is the package path relative to the page, which places the row in
+	// the sidebar tree. It is empty for a root package row, and for the rows
+	// of other tables.
+	Rel        string
 	Internal   bool
 	Unexported bool
 	Deprecated string

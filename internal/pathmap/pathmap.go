@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// IndexFile is the file name of module and package pages.
+// IndexFile is the file name of the root page and of package pages.
 const IndexFile = "index.html"
 
 // StaticDir is the directory that holds the shared assets.
@@ -17,20 +17,17 @@ func Root() string {
 	return IndexFile
 }
 
-// Module returns the path of the module page.
+// Module returns the path of the module page: an HTML file next to the
+// module directory, so that the root package keeps the index file of the
+// directory.
 func Module(modulePath string) string {
-	return path.Join(modulePath, IndexFile)
+	return modulePath + ".html"
 }
 
 // Package returns the path of a package page. rel is the package path relative
 // to the module root, or empty for the root package.
 func Package(modulePath, rel string) string {
 	return path.Join(modulePath, rel, IndexFile)
-}
-
-// PackageDir returns the output directory of a package.
-func PackageDir(modulePath, rel string) string {
-	return path.Join(modulePath, rel)
 }
 
 // UnexportedMark precedes an unexported name in a page path. The mark keeps

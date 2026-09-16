@@ -65,8 +65,8 @@ type Module struct {
 	// Packages are the packages of the module, sorted by import path.
 	Packages []*Package
 
-	// DocFile is the Markdown file that documents the module root. It is set
-	// only when no package lives in the root directory.
+	// DocFile is the Markdown file that documents the module. It is nil when
+	// the module root directory has none.
 	DocFile *DocFile
 }
 
@@ -80,17 +80,20 @@ func (m *Module) Root() *Package {
 	return nil
 }
 
-// Doc returns the raw documentation of the module: the doc comment of its
-// root package, or an empty string when the module has no root package.
+// Doc returns the raw documentation of the module: the text of its Markdown
+// file, or else the doc comment of its root package, or else an empty string.
 func (m *Module) Doc() string {
+	if m.DocFile != nil {
+		return m.DocFile.Text
+	}
 	if root := m.Root(); root != nil {
 		return root.Doc
 	}
 	return ""
 }
 
-// Deprecated returns the deprecation message of the root package, or an
-// empty string when the module has no deprecated root package.
+// Deprecated returns the deprecation message of the module documentation, or
+// an empty string when the module is not deprecated.
 func (m *Module) Deprecated() string {
 	return Deprecation(m.Doc())
 }

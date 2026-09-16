@@ -188,8 +188,10 @@ func exampleTitle(ex *model.Example) string {
 }
 
 // breadcrumb returns the path from the module badge to the package p of mod,
-// followed by the given symbol crumbs. p is nil for a module without a root
-// package. In a site with several modules, the workspace badge comes first.
+// followed by the given symbol crumbs. p is nil for the module page. In a
+// site with several modules, the workspace badge comes first. On the pages
+// below a module with a root package, the crumb of the root package follows
+// the module badge.
 func (b *builder) breadcrumb(mod *model.Module, p *model.Package, symbols ...crumb) []crumb {
 	var crumbs []crumb
 	module := crumb{Text: "module", Href: b.rel(pathmap.Module(mod.Path)), Badge: true, Title: mod.Path}
@@ -198,6 +200,9 @@ func (b *builder) breadcrumb(mod *model.Module, p *model.Package, symbols ...cru
 		crumbs = append(crumbs, b.rootCrumb())
 	}
 	crumbs = append(crumbs, module)
+	if root := mod.Root(); p != nil && root != nil {
+		crumbs = append(crumbs, crumb{Text: root.DisplayName(), Href: b.rel(pathmap.Package(mod.Path, "")), Root: true})
+	}
 	if p != nil && p.RelPath != "" {
 		elems := strings.Split(p.RelPath, "/")
 		for i, elem := range elems {

@@ -59,6 +59,7 @@ func TestGenerator_Generate_WithFixture_WritesEveryPage(t *testing.T) {
 		Reporter: reporter,
 	}
 	wantPaths := []string{
+		"example.com/sample.html",
 		"example.com/sample/Big.html",
 		"example.com/sample/Blue.html",
 		"example.com/sample/Circle.Area.html",
@@ -176,10 +177,12 @@ func TestGenerator_Generate_WithSeveralModules_WritesRootPage(t *testing.T) {
 		Reporter: reporter,
 	}
 	wantPaths := []string{
+		"example.com/multi.html",
 		"example.com/multi/Name.html",
 		"example.com/multi/NewUnit.html",
 		"example.com/multi/Root.Name.html",
 		"example.com/multi/Root.html",
+		"example.com/multi/alpha.html",
 		"example.com/multi/alpha/Namer.html",
 		"example.com/multi/alpha/Unit.Name.html",
 		"example.com/multi/alpha/Unit.html",
@@ -190,7 +193,7 @@ func TestGenerator_Generate_WithSeveralModules_WritesRootPage(t *testing.T) {
 		"example.com/multi/alpha/inner/NewUnit.html",
 		"example.com/multi/alpha/inner/index.html",
 		"example.com/multi/alpha/inner/inner.go.html",
-		"example.com/multi/beta/index.html",
+		"example.com/multi/beta.html",
 		"example.com/multi/beta/lib/New.html",
 		"example.com/multi/beta/lib/NewUnit.html",
 		"example.com/multi/beta/lib/Wrapper.Name.html",
@@ -263,7 +266,7 @@ func TestGenerator_Generate_WithOneModule_RedirectsRootPage(t *testing.T) {
 	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
 		t.Fatalf("Generator.Generate(...) = %v, want nil", got)
 	}
-	if got, want := strings.Contains(root, `<meta http-equiv="refresh" content="0; url=example.com/sample/index.html">`), true; !cmp.Equal(got, want) {
+	if got, want := strings.Contains(root, `<meta http-equiv="refresh" content="0; url=example.com/sample.html">`), true; !cmp.Equal(got, want) {
 		t.Errorf("Generator.Generate(...) root page redirects = %v, want %v", got, want)
 	}
 }

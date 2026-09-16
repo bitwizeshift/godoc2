@@ -325,6 +325,7 @@ func TestLoad_WithWorkspace_ReturnsEveryModule(t *testing.T) {
 		{
 			Path:     "example.com/multi",
 			Dir:      ".",
+			DocFile:  "README.md",
 			Packages: []string{"example.com/multi"},
 		},
 		{

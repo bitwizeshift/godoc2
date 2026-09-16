@@ -63,50 +63,29 @@ func TestRenderer_Module(t *testing.T) {
 	sut := newRenderer(t)
 	mod := loadertest.SampleModule(t)
 	var out strings.Builder
-	wantSections := []string{"documentation", "tools", "packages", "examples", "constants", "errors", "variables", "interfaces", "types", "functions"}
+	wantSections := []string{"documentation", "tools", "packages"}
 	wantFragments := fragments{
-		`<h1><span class="kind">package</span> sample</h1>`,
-		`<h3>Sentinel Errors</h3>
-    <ul>
-      <li><a href="#var.ErrNegative">ErrNegative</a></li>
-    </ul>`,
-		`<h3>Variables</h3>
-    <ul>
-      <li><a href="#var.DefaultColor">DefaultColor</a></li>
-    </ul>`,
-		`<h3>Interfaces</h3>
-    <ul>
-      <li><a href="#type.Named">Named</a></li>
-      <li><a href="#type.Namer">Namer</a></li>
-      <li><a href="#type.Shape">Shape</a></li>
-    </ul>`,
-		`<h3>Types</h3>
-    <ul>
-      <li><a href="#type.Big">Big</a></li>
-      <li><a href="#type.Circle">Circle</a></li>
-      <li><a href="#type.Color">Color</a></li>
-      <li><a href="#type.Counter">Counter</a></li>
-      <li><a href="#type.Grid">Grid</a></li>
-      <li><a href="#type.ID">ID</a></li>`,
-		`<a class="badge badge-module" href="index.html" title="example.com/sample">module</a>`,
-		`<td><a href="cmd/tool/index.html">tool</a></td>`,
-		`<td><a href="internal/secret/index.html">internal/secret</a> <span class="badge badge-internal" title="Importable only by packages rooted at the parent of the internal directory.">internal</span></td>`,
-		`<td><a href="shapes/index.html">shapes</a></td>`,
-		`<td><a href="empty/index.html">empty</a> <span class="badge badge-deprecated" title="Nothing lives here.">deprecated</span></td>`,
-		`<li><a href="#const.Legacy">Legacy</a> <span class="badge badge-deprecated" title="Use [Version] instead. Legacy is kept only so that old callers still compile.">deprecated</span></li>`,
-		`<span class="badge badge-deprecated" title="Use [Version] instead. Legacy is kept only so that old callers still compile.">deprecated</span> <a class="src" href="sample.go.html#L155">source</a>`,
-		`<td><a href="readme/index.html">readme</a></td>`,
+		`<title>example.com/sample</title>`,
+		`<h1><span class="kind">module</span> example.com/sample</h1>`,
+		`<a class="badge badge-module" href="sample.html" title="example.com/sample">module</a>
+    </nav>`,
+		`<td><a href="sample/cmd/tool/index.html">tool</a></td>`,
+		`<td><a href="sample/index.html">sample</a></td>
+          <td class="summary"><p>Package sample is a fixture module for godoc2 tests.</p>`,
+		`<td><a href="sample/internal/secret/index.html">internal/secret</a> <span class="badge badge-internal" title="Importable only by packages rooted at the parent of the internal directory.">internal</span></td>`,
+		`<td><a href="sample/shapes/index.html">shapes</a></td>`,
+		`<td><a href="sample/empty/index.html">empty</a> <span class="badge badge-deprecated" title="Nothing lives here.">deprecated</span></td>`,
+		`<td><a href="sample/readme/index.html">readme</a></td>`,
 		`<td class="summary"><p>Package readme is documented by its README file.</p>`,
 		`<td class="summary"><p>Package indexed is documented by index.md.</p>`,
+		`<summary><a href="sample.html">sample</a></summary>`,
+		`<li><a href="sample/index.html">sample</a>
+  </li>`,
 		`<summary><span class="dir">internal</span></summary>`,
 		`<h1 id="usage">Usage</h1>`,
 		`<li><a href="#usage">Usage</a></li>`,
-		`<a href="Circle.html"><code>Circle</code></a>`,
-		`<a href="shapes/Sizer.html"><code>shapes.Sizer</code></a>`,
-		`<details class="item" id="type.Circle" open>`,
-		`<a href="Circle.html"><span class="nx">Circle</span></a>`,
-		`<a class="src" href="sample.go.html#L44">source</a>`,
-		`<button type="button" class="read-more">Read more</button>`,
+		`<a href="sample/Circle.html"><code>Circle</code></a>`,
+		`<a href="sample/shapes/Sizer.html"><code>shapes.Sizer</code></a>`,
 	}
 
 	// Act
@@ -125,7 +104,7 @@ func TestRenderer_Module(t *testing.T) {
 	}
 }
 
-func TestRenderer_Module_WithoutRootPackage_UsesModuleDocFile(t *testing.T) {
+func TestRenderer_Module_WithDocFile_ShowsDocFile(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
@@ -136,9 +115,9 @@ func TestRenderer_Module_WithoutRootPackage_UsesModuleDocFile(t *testing.T) {
 	wantFragments := fragments{
 		`<h1><span class="kind">module</span> example.com/bare</h1>`,
 		`<h1 id="bare">Bare</h1>`,
-		`<a href="lib/index.html">lib</a>`,
-		`<a href="lib/lib.go.html">its source</a>`,
-		`<td><a href="lib/index.html">lib</a></td>`,
+		`<a href="bare/lib/index.html">lib</a>`,
+		`<a href="bare/lib/lib.go.html">its source</a>`,
+		`<td><a href="bare/lib/index.html">lib</a></td>`,
 	}
 
 	// Act
@@ -164,10 +143,10 @@ func TestRenderer_Root_WithOneModule_Redirects(t *testing.T) {
 	sut := newRenderer(t)
 	var out strings.Builder
 	wantFragments := fragments{
-		`<meta http-equiv="refresh" content="0; url=example.com/sample/index.html">`,
-		`<link rel="canonical" href="example.com/sample/index.html">`,
+		`<meta http-equiv="refresh" content="0; url=example.com/sample.html">`,
+		`<link rel="canonical" href="example.com/sample.html">`,
 		`<title>example.com/sample</title>`,
-		`<a href="example.com/sample/index.html">example.com/sample</a>`,
+		`<a href="example.com/sample.html">example.com/sample</a>`,
 	}
 
 	// Act
@@ -197,15 +176,16 @@ func TestRenderer_Root_WithSeveralModules_ListsModules(t *testing.T) {
 		`<h1>Modules</h1>`,
 		`<h1 id="multi">Multi</h1>`,
 		`<a href="example.com/multi/alpha/index.html">alpha</a>`,
-		`<a href="example.com/multi/beta/index.html">beta</a>`,
+		`<a href="example.com/multi/beta.html">beta</a>`,
 		`<a href="example.com/multi/beta/lib/lib.go.html#L7">the wrapper</a>`,
 		`<a href="example.com/multi/docs/notes.md">the notes</a>`,
-		`<td><a href="example.com/multi/index.html">example.com/multi</a></td>`,
-		`<td class="summary"><p>Package multi is the root module of the multi fixture.</p>`,
-		`<td><a href="example.com/multi/alpha/index.html">example.com/multi/alpha</a></td>`,
-		`<td><a href="example.com/multi/beta/index.html">example.com/multi/beta</a></td>`,
-		`<td class="summary"><p>Module beta has no package in its root directory.</p>`,
-		`<li><a href="example.com/multi/beta/index.html">example.com/multi/beta</a></li>`,
+		`<td><a href="example.com/multi.html">example.com/multi</a></td>
+          <td class="summary"><p>Two modules live in this directory.</p>`,
+		`<td><a href="example.com/multi/alpha.html">example.com/multi/alpha</a></td>
+          <td class="summary"><p>Package alpha is the first module of the multi fixture.</p>`,
+		`<td><a href="example.com/multi/beta.html">example.com/multi/beta</a></td>
+          <td class="summary"><p>Module beta has no package in its root directory.</p>`,
+		`<li><a href="example.com/multi/beta.html">example.com/multi/beta</a></li>`,
 	}
 
 	// Act
@@ -233,8 +213,7 @@ func TestRenderer_Package_WithSeveralModules_LinksToRoot(t *testing.T) {
 	wantFragments := fragments{
 		`<a class="sidebar-logo" href="../../../../index.html" title="Modules" aria-label="Modules">`,
 		`<a class="badge badge-module" href="../../../../index.html">workspace</a>`,
-		`<span class="sep">/</span><a class="badge badge-module" href="../index.html" title="example.com/multi/beta">module</a>`,
-		`<span class="sep">/</span><a href="index.html">lib</a>`,
+		`<span class="sep">/</span><a class="badge badge-module" href="../../beta.html" title="example.com/multi/beta">module</a><span class="sep">/</span><a href="index.html">lib</a>`,
 	}
 
 	// Act
@@ -282,6 +261,52 @@ func TestRenderer_Package(t *testing.T) {
 		wantSections  []string
 		wantFragments fragments
 	}{
+		{
+			name:         "root package",
+			pkg:          loadertest.Package(t, ""),
+			wantSections: []string{"documentation", "packages", "examples", "constants", "errors", "variables", "interfaces", "types", "functions"},
+			wantFragments: fragments{
+				`<title>example.com/sample</title>`,
+				`<h1><span class="kind">package</span> sample</h1>`,
+				`<a class="badge badge-module" href="../sample.html" title="example.com/sample">module</a> <span class="crumb">(</span><a href="index.html">sample</a><span class="crumb">)</span>
+    </nav>`,
+				`<summary><a href="index.html">sample</a></summary>`,
+				`<td><a href="shapes/index.html">shapes</a></td>`,
+				`<td><a href="empty/index.html">empty</a> <span class="badge badge-deprecated" title="Nothing lives here.">deprecated</span></td>`,
+				`<h3>Sentinel Errors</h3>
+    <ul>
+      <li><a href="#var.ErrNegative">ErrNegative</a></li>
+    </ul>`,
+				`<h3>Variables</h3>
+    <ul>
+      <li><a href="#var.DefaultColor">DefaultColor</a></li>
+    </ul>`,
+				`<h3>Interfaces</h3>
+    <ul>
+      <li><a href="#type.Named">Named</a></li>
+      <li><a href="#type.Namer">Namer</a></li>
+      <li><a href="#type.Shape">Shape</a></li>
+    </ul>`,
+				`<h3>Types</h3>
+    <ul>
+      <li><a href="#type.Big">Big</a></li>
+      <li><a href="#type.Circle">Circle</a></li>
+      <li><a href="#type.Color">Color</a></li>
+      <li><a href="#type.Counter">Counter</a></li>
+      <li><a href="#type.Grid">Grid</a></li>
+      <li><a href="#type.ID">ID</a></li>`,
+				`<li><a href="#const.Legacy">Legacy</a> <span class="badge badge-deprecated" title="Use [Version] instead. Legacy is kept only so that old callers still compile.">deprecated</span></li>`,
+				`<span class="badge badge-deprecated" title="Use [Version] instead. Legacy is kept only so that old callers still compile.">deprecated</span> <a class="src" href="sample.go.html#L155">source</a>`,
+				`<h1 id="usage">Usage</h1>`,
+				`<li><a href="#usage">Usage</a></li>`,
+				`<a href="Circle.html"><code>Circle</code></a>`,
+				`<a href="shapes/Sizer.html"><code>shapes.Sizer</code></a>`,
+				`<details class="item" id="type.Circle" open>`,
+				`<a href="Circle.html"><span class="nx">Circle</span></a>`,
+				`<a class="src" href="sample.go.html#L44">source</a>`,
+				`<button type="button" class="read-more">Read more</button>`,
+			},
+		},
 		{
 			name:         "empty package",
 			pkg:          loadertest.Package(t, "empty"),
@@ -527,7 +552,7 @@ func TestRenderer_WithUnexported_MarksUnexportedSymbols(t *testing.T) {
 		{
 			name: "package page lists unexported symbols last",
 			render: func(r *render.Renderer, out *strings.Builder) error {
-				return r.Module(out, loadertest.Unexported(t).Modules[0])
+				return r.Package(out, loadertest.UnexportedPackage(t, ""))
 			},
 			wantFragments: fragments{
 				`<li><a href="#type.Stack">Stack</a></li>
